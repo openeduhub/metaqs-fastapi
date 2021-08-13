@@ -1,0 +1,37 @@
+version: '3.7'
+
+networks:
+  traefik-public:
+    external: true
+
+services:
+
+  fastapi:
+    container_name: fastapi
+    image: community.docker.edu-sharing.com/metaqs-api--fastpi:latest
+    environment:
+      - PROJECT_NAME="MetaQS API"
+      - API_VERSION=v1
+      - LOG_LEVEL=error
+      - ALLOWED_HOSTS=*
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80/_ping" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    ports:
+      - "${PORT}:80"
+    networks:
+      - traefik-public
+    deploy:
+      labels:
+        - traefik.frontend.rule=Host:metalookup.openeduhub.net
+        - traefik.enable=true
+        - traefik.port="${PORT}"
+        - traefik.tags=traefik-public
+        - traefik.docker.network=traefik-public
+        - traefik.frontend.entryPoints=http,https
+        - traefik.frontend.redirect.entryPoint=https
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80 --log-level error
