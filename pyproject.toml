@@ -14,6 +14,8 @@ databases = {extras = ["postgresql"], version = "^0.4.3"}
 asyncpg = "^0.24.0"
 psycopg2-binary = "^2.9.1"
 alembic = "^1.6.5"
+glom = "^20.11.0"
+more-itertools = "^8.8.0"
 
 [tool.poetry.dev-dependencies]
 

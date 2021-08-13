@@ -1,6 +1,11 @@
 from importlib import import_module
 
 from app.core.config import API_VERSION
+from .util import (
+    materials_filter_params,
+    PaginationParams,
+    pagination_params,
+)
 
 api = import_module(f".{API_VERSION}.api", package=__name__)
 
