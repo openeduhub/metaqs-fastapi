@@ -1,0 +1,9 @@
+*.json.gz
+README.md
+Dockerfile
+docker-compose.*
+.idea/
+.git/
+.gitignore
+__pycache__/
+.ipynb_checkpoints/
