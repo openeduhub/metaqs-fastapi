@@ -1,0 +1,79 @@
+version: '3.7'
+
+x-op-restart-policy: &restart_policy
+  restart: unless-stopped
+
+volumes:
+  shared_run:
+
+services:
+
+  nginx:
+    <<: *restart_policy
+    environment:
+      # unquoted variable substitution required
+      # because of internal workings of nginx image
+      - NGINX_HOST=${NGINX_HOST}
+    ports:
+      - "443:443"
+    volumes:
+      - "shared_run:/run"
+      - ./nginx/nginx-ssl.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd
+
+  nginx_reloader:
+    <<: *restart_policy
+    container_name: nginx_reloader
+    image: nginx:stable-alpine
+    depends_on:
+      - nginx
+      - certbot
+    pid: service:nginx
+    volumes:
+      - "shared_run:/run"
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        while :; do
+          sleep 6h & wait $${!}
+          echo reloading
+          nginx -s reload
+        done
+
+  certbot:
+    <<: *restart_policy
+    container_name: certbot
+    image: certbot/certbot
+    depends_on:
+      - nginx
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        trap exit TERM
+        while :; do
+          echo "renewing certs"
+          certbot renew
+          sleep 12h & wait $${!}
+        done
+
+  fastapi:
+    <<: *restart_policy
+
+  elasticsearch:
+    <<: *restart_policy
+
+  kibana:
+    <<: *restart_policy
+    environment:
+      - ELASTICSEARCH_HOSTS=["http://elasticsearch:9200"]
+      - SERVER_BASEPATH=/__kibana
+      - SERVER_REWRITEBASEPATH=true
