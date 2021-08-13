@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
 
 from starlette.middleware.cors import CORSMiddleware
@@ -39,6 +40,21 @@ app.add_exception_handler(HTTPException, http_error_handler)
 app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
 
 app.include_router(api_router, prefix=f"/api/{API_VERSION}")
+
+
+class Ping(BaseModel):
+    status: str = Field(
+        default="not ok", description="Ping output. Should be 'ok' in happy case.",
+    )
+
+
+@app.get(
+    "/_ping",
+    description="Ping function for automatic health check.",
+    response_model=Ping,
+)
+async def ping():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
