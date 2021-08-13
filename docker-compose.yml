@@ -1,0 +1,63 @@
+version: '3.7'
+
+volumes:
+  elastic-data:
+
+networks:
+  backend:
+  frontend:
+
+services:
+
+  nginx:
+    container_name: nginx
+    image: nginx:stable-alpine
+    depends_on:
+      - fastapi
+      - elasticsearch
+      - kibana
+    environment:
+      - NGINX_HOST=localhost
+    networks: [ frontend ]
+    ports:
+      - "80:80"
+
+  fastapi:
+    container_name: fastapi
+    build: ./
+    image: community.docker.edu-sharing.com/metaqs-api--fastpi
+    depends_on:
+      - elasticsearch
+    environment:
+      - PROJECT_NAME="MetaQS API"
+      - API_VERSION=${API_VERSION:-v1}
+      - LOG_LEVEL=error
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+    networks: [ frontend, backend ]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80 --log-level error
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.4
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    networks: [ backend ]
+    volumes:
+      - elastic-data:/usr/share/elasticsearch/data
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.13.4
+    environment:
+      - ELASTICSEARCH_HOSTS=["${ELASTICSEARCH_URL:-http://elasticsearch:9200}"]
+    depends_on:
+      - elasticsearch
+    networks: [ frontend, backend ]
