@@ -68,6 +68,12 @@ services:
   fastapi:
     <<: *restart_policy
 
+#  redis:
+#    <<: *restart_policy
+#
+#  redisinsight:
+#    <<: *restart_policy
+
   postgres:
     <<: *restart_policy
 

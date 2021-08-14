@@ -16,6 +16,7 @@ psycopg2-binary = "^2.9.1"
 alembic = "^1.6.5"
 glom = "^20.11.0"
 more-itertools = "^8.8.0"
+aioredis = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 

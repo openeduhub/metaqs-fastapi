@@ -3,6 +3,8 @@ version: '3.7'
 volumes:
   pg-data:
   elastic-data:
+#  redis-data:
+#  redisinsight-data:
 
 networks:
   backend:
@@ -15,6 +17,8 @@ services:
     image: nginx:stable-alpine
     depends_on:
       - fastapi
+#      - redis
+#      - redisinsight
       - postgres
       - elasticsearch
       - kibana
@@ -29,6 +33,7 @@ services:
     build: ./
     image: community.docker.edu-sharing.com/metaqs-api--fastpi
     depends_on:
+#      - redis
       - postgres
       - elasticsearch
     environment:
@@ -43,6 +48,30 @@ services:
       - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
     networks: [ frontend, backend ]
     command: uvicorn app.main:app --host 0.0.0.0 --port 80 --log-level error
+
+#  redis:
+#    container_name: redis
+#    image: redis:alpine
+#    environment:
+#      - REDIS_PASSWORD="${REDIS_PASSWORD}"
+#      - REDIS_REPLICATION_MODE=master
+#    networks: [ backend ]
+#    volumes:
+#      - redis-data:/data
+#    command:
+#      # Save if 100 keys are added in every 10 seconds
+#      - "--save 10 100"
+#      # Set password
+#      - "--requirepass ${REDIS_PASSWORD}"
+#
+#  redisinsight: # redis db visualization dashboard
+#    container_name: redisinsight
+#    image: redislabs/redisinsight
+#    depends_on:
+#      - redis
+#    networks: [ frontend, backend ]
+#    volumes:
+#      - redisinsight-data:/db
 
   postgres:
     container_name: postgres
