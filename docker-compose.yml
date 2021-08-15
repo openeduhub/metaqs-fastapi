@@ -61,3 +61,20 @@ services:
     depends_on:
       - elasticsearch
     networks: [ frontend, backend ]
+
+#  importer:
+#    container_name: importer
+#    image: elasticdump/elasticsearch-dump
+#    depends_on:
+#      - elasticsearch
+#    networks: [ backend ]
+#    volumes:
+#      - "${PWD}/wlo.json.gz:/tmp/dump.json.gz"
+#    command:
+#      - /bin/bash
+#      - -c
+#      - |
+#        apt-get update \
+#        && apt-get install -y curl \
+#        && curl -X PUT -H "Content-Type: application/json" -d '{"index_patterns" : ["workspace"],"order" : 1,"settings" : {"index.mapping.total_fields.limit" : "2000"}}' http://elasticsearch:9200/_template/workspace 2>/dev/null | grep -q '{"acknowledged":true}' \
+#        && elasticdump --input=/tmp/dump.json.gz --output=http://elasticsearch:9200/workspace --fsCompress
