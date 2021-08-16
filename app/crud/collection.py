@@ -3,21 +3,29 @@ from typing import (
     Optional,
 )
 
+from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
 
 from app.elastic import (
     Search,
     qbool,
+    qterm,
+    acomposite,
+    abucketsort,
     Q,
+    A,
 )
+from app.models.elastic import DescendantCollectionsMaterialsCounts
 from app.models.collection import (
     Attribute as CollectionAttribute,
     Collection,
 )
 from app.models.learning_material import LearningMaterial
 from .elastic import (
+    base_filter,
     get_many_base_query,
     ResourceType,
+    type_filter,
 )
 from .learning_material import (
     get_many as get_many_materials,
@@ -48,6 +56,7 @@ async def get_many(
     ancestor_id: Optional[str] = None,
     missing_attr_filter: Optional[MissingAttributeFilter] = None,
     max_hits: Optional[int] = 5000,
+    source_fields: Optional[List[str]] = None,
 ) -> List[Collection]:
     query_dict = get_many_base_query(
         resource_type=ResourceType.COLLECTION, ancestor_id=ancestor_id,
@@ -56,7 +65,9 @@ async def get_many(
         query_dict = missing_attr_filter(query_dict=query_dict)
     s = Search()
     s.query = qbool(**query_dict)
-    response = s.source(Collection.source_fields())[:max_hits].execute()
+    response = s.source(
+        source_fields if source_fields else Collection.source_fields()
+    )[:max_hits].execute()
     if response.success():
         return [Collection.parse_elastic_hit(hit) for hit in response]
 
@@ -83,3 +94,33 @@ async def get_child_collections_with_missing_attributes(
         missing_attr_filter=missing_attr_filter,
         max_hits=max_hits,
     )
+
+
+async def get_descendant_collections_materials_counts(
+    ancestor_id: str, size: int = 5000,
+) -> DescendantCollectionsMaterialsCounts:
+
+    s = Search().query(
+        qbool(
+            filter=[
+                *type_filter[ResourceType.MATERIAL],
+                *base_filter,
+                qterm(**{"collections.path.keyword": ancestor_id}),
+            ]
+        )
+    )
+    s.aggs.bucket(
+        "grouped_by_collection",
+        acomposite(
+            sources=[
+                {"noderef_id": A("terms", field="collections.nodeRef.id.keyword")}
+            ],
+            size=size,
+        ),
+    ).pipeline(
+        "sorted_by_count", abucketsort(sort=[{"_count": {"order": "asc"}}]),
+    )
+
+    response: Response = s[:0].execute()
+    if response.success():
+        return DescendantCollectionsMaterialsCounts.parse_elastic_response(response)

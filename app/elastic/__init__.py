@@ -2,6 +2,7 @@ from typing import List
 
 from elasticsearch_dsl import *
 from elasticsearch_dsl import Search as ElasticSearch
+from elasticsearch_dsl.aggs import Agg
 from elasticsearch_dsl.query import Query
 
 
@@ -36,3 +37,11 @@ def qnotexists(field: str) -> Query:
 
 def qboolor(conditions: List[Query]) -> Query:
     return qbool(should=conditions, minimum_should_match=1,)
+
+
+def acomposite(sources: List[Query], **kwargs) -> Agg:
+    return A("composite", sources=sources, **kwargs)
+
+
+def abucketsort(sort: List[Query], **kwargs) -> Agg:
+    return A("bucket_sort", sort=sort, **kwargs)
