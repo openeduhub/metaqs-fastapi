@@ -1,6 +1,7 @@
 version: '3.7'
 
 volumes:
+  pg-data:
   elastic-data:
 
 networks:
@@ -14,6 +15,7 @@ services:
     image: nginx:stable-alpine
     depends_on:
       - fastapi
+      - postgres
       - elasticsearch
       - kibana
     environment:
@@ -27,15 +29,31 @@ services:
     build: ./
     image: community.docker.edu-sharing.com/metaqs-api--fastpi
     depends_on:
+      - postgres
       - elasticsearch
     environment:
       - PROJECT_NAME="MetaQS API"
       - API_VERSION=${API_VERSION:-v1}
       - LOG_LEVEL=error
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=oeh
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
       - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
     networks: [ frontend, backend ]
     command: uvicorn app.main:app --host 0.0.0.0 --port 80 --log-level error
+
+  postgres:
+    container_name: postgres
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=oeh
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks: [ backend ]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
 
   elasticsearch:
     container_name: elasticsearch

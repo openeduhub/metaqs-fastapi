@@ -68,6 +68,9 @@ services:
   fastapi:
     <<: *restart_policy
 
+  postgres:
+    <<: *restart_policy
+
   elasticsearch:
     <<: *restart_policy
 
