@@ -6,6 +6,7 @@ from typing import (
     Type,
     TypeVar,
 )
+from uuid import UUID
 
 from glom import (
     glom,
@@ -27,6 +28,7 @@ class Attribute(str, Enum):
     TITLE = "properties.cm:title"
     KEYWORDS = "properties.cclom:general_keyword"
     DESCRIPTION = "properties.cm:description"
+    PARENT_ID = "parentRef.id"
 
 
 class CollectionBase(ElasticResource):
@@ -34,6 +36,7 @@ class CollectionBase(ElasticResource):
     title: Optional[EmptyStrToNone] = None
     keywords: Optional[List[str]] = None
     description: Optional[EmptyStrToNone] = None
+    parent_id: Optional[UUID] = None
 
     @classmethod
     def source_fields(cls: Type[_COLLECTION]) -> List:
@@ -55,6 +58,7 @@ class CollectionBase(ElasticResource):
                 hit, (Coalesce(Attribute.KEYWORDS, default=[]), Iter().all())
             ),
             description=glom(hit, Coalesce(Attribute.DESCRIPTION, default=None)),
+            parent_id=glom(hit, Coalesce(Attribute.PARENT_ID, default=None)),
         )
 
 

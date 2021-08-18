@@ -156,3 +156,20 @@ async def get_descendant_collections_materials_counts(
     response.headers["X-Total-Count"] = str(len(stats))
     response.headers["X-Total-Errors"] = str(len(errors))
     return stats
+
+
+@router.get(
+    "/collections/tree",
+    response_model=list,
+    status_code=HTTP_200_OK,
+    responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"},},
+    tags=["Collections"],
+)
+async def get_portals(
+    *,
+    response: Response,
+):
+    children = await crud_collection.get_portals()
+    # response.headers["X-Total-Count"] = str(len(collections))
+    return children
+

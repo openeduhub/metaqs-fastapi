@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import (
     APIRouter,
 )
@@ -14,7 +12,7 @@ router = APIRouter()
 
 @router.get(
     "/stats",
-    response_model=List[dict],
+    response_model=dict,
     status_code=HTTP_200_OK,
     tags=["Statistics"],
 )

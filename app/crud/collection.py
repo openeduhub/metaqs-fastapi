@@ -6,6 +6,7 @@ from typing import (
 from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
 
+from app.core.config import PORTAL_ROOT_ID
 from app.elastic import (
     Search,
     qbool,
@@ -15,7 +16,10 @@ from app.elastic import (
     Q,
     A,
 )
-from app.models.elastic import DescendantCollectionsMaterialsCounts
+from app.models.elastic import (
+    Attribute as BaseAttribute,
+    DescendantCollectionsMaterialsCounts,
+)
 from app.models.collection import (
     Attribute as CollectionAttribute,
     Collection,
@@ -124,3 +128,46 @@ async def get_descendant_collections_materials_counts(
     response: Response = s[:0].execute()
     if response.success():
         return DescendantCollectionsMaterialsCounts.parse_elastic_response(response)
+
+
+async def get_portals(
+    root_noderef_id: str = PORTAL_ROOT_ID, size: int = 5000,
+) -> list:
+
+    s = Search().query(
+        qbool(
+            filter=[
+                *type_filter[ResourceType.COLLECTION],
+                *base_filter,
+                qterm(**{"path.keyword": root_noderef_id}),
+            ]
+        )
+    )
+
+    response: Response = s.source([
+        BaseAttribute.NODEREF_ID,
+        BaseAttribute.PATH,
+        CollectionAttribute.TITLE,
+        CollectionAttribute.PARENT_ID,
+    ]).sort("fullpath.keyword")[:size].execute()
+
+    if response.success():
+        lut = {
+            PORTAL_ROOT_ID: []
+        }
+
+        for hit in response:
+            portal = Collection.parse_elastic_hit(hit)
+
+            try:
+                portal_node = {
+                    "noderef_id": portal.noderef_id,
+                    "title": portal.title,
+                    "children": [],
+                }
+                lut[portal.parent_id].append(portal_node)
+                lut[portal.noderef_id] = portal_node["children"]
+            except KeyError:
+                pass
+
+        return lut[PORTAL_ROOT_ID]

@@ -1,6 +1,7 @@
-from typing import List
+from collections import defaultdict
 
 from elasticsearch_dsl.response import Response
+from glom import glom, merge
 
 from app.elastic import (
     Search,
@@ -15,7 +16,7 @@ from .elastic import (
 )
 
 
-async def get_stats(size: int = 20000) -> List[dict]:
+async def get_stats(size: int = 20000) -> dict:
 
     s = Search().query(
         qbool(
@@ -30,12 +31,23 @@ async def get_stats(size: int = 20000) -> List[dict]:
         acomposite(
             sources=[
                 {"materialType": A("terms", field="i18n.de_DE.ccm:educationallearningresourcetype.keyword")},
-                {"collection_id": A("terms", field="collections.nodeRef.id.keyword")}
+                {"noderef_id": A("terms", field="collections.nodeRef.id.keyword")}
             ],
             size=size,
         ),
     )
 
     response: Response = s[:0].execute()
+
     if response.success():
-        return response.to_dict()["aggregations"]["stats"]["buckets"]
+
+        def group_results(carry, stat):
+            carry[glom(stat, 'key.noderef_id')].append(
+                {glom(stat, 'key.materialType'): glom(stat, 'doc_count')}
+            )
+
+        return merge(
+            response.aggregations.stats.buckets,
+            op=group_results,
+            init=lambda: defaultdict(list),
+        )
