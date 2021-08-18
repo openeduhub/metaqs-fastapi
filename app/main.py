@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import (
+    FastAPI,
+    Depends,
+)
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
 
@@ -22,6 +25,12 @@ from app.elastic.utils import (
     connect_to_elastic,
 )
 
+from app.pg.database import DataBase
+from app.pg.db_utils import (
+    get_database,
+    close_postgres_connection,
+)
+
 app = FastAPI(title=PROJECT_NAME, debug=DEBUG)
 
 app.add_middleware(
@@ -35,6 +44,7 @@ app.add_middleware(
 
 app.add_event_handler("startup", connect_to_elastic)
 app.add_event_handler("shutdown", close_elastic_connection)
+app.add_event_handler("shutdown", close_postgres_connection)
 
 app.add_exception_handler(HTTPException, http_error_handler)
 app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
@@ -52,9 +62,21 @@ class Ping(BaseModel):
     "/_ping",
     description="Ping function for automatic health check.",
     response_model=Ping,
+    tags=["healthcheck"],
 )
 async def ping():
     return {"status": "ok"}
+
+
+@app.get(
+    "/pg-version", tags=["healthcheck"], response_model=dict,
+)
+async def pg_version(
+    db: DataBase = Depends(get_database),
+):
+    async with db.pool.acquire() as conn:
+        version = await conn.fetchval("select version()")
+        return {"version": version}
 
 
 if __name__ == "__main__":
