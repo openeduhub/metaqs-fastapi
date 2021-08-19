@@ -69,9 +69,9 @@ async def get_many(
         query_dict = missing_attr_filter(query_dict=query_dict)
     s = Search()
     s.query = qbool(**query_dict)
-    response = s.source(
-        source_fields if source_fields else Collection.source_fields()
-    )[:max_hits].execute()
+    response = s.source(source_fields if source_fields else Collection.source_fields())[
+        :max_hits
+    ].execute()
     if response.success():
         return [Collection.parse_elastic_hit(hit) for hit in response]
 
