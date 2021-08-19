@@ -71,9 +71,7 @@ async def ping():
 @app.get(
     "/pg-version", tags=["healthcheck"], response_model=dict,
 )
-async def pg_version(
-    db: DataBase = Depends(get_database),
-):
+async def pg_version(db: DataBase = Depends(get_database),):
     async with db.pool.acquire() as conn:
         version = await conn.fetchval("select version()")
         return {"version": version}
