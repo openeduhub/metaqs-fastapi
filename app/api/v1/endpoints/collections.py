@@ -119,16 +119,15 @@ async def get_descendant_collections_materials_counts(
 ):
     descendant_collections = await crud_collection.get_many(
         ancestor_id=noderef_id,
-        source_fields=[
-            ElasticResourceAttribute.NODEREF_ID,
-            CollectionAttribute.TITLE,
-        ],
+        source_fields=[ElasticResourceAttribute.NODEREF_ID, CollectionAttribute.TITLE,],
     )
     materials_counts = await crud_collection.get_descendant_collections_materials_counts(
         ancestor_id=noderef_id,
     )
 
-    descendant_collections = {collection.noderef_id: collection.title for collection in descendant_collections}
+    descendant_collections = {
+        collection.noderef_id: collection.title for collection in descendant_collections
+    }
     stats = []
     errors = []
     for record in materials_counts.results:
@@ -138,18 +137,21 @@ async def get_descendant_collections_materials_counts(
             errors.append(record.noderef_id)
             continue
 
-        stats.append(CollectionMaterialsCount(
-            noderef_id=record.noderef_id,
-            title=title,
-            materials_count=record.materials_count,
-        ))
+        stats.append(
+            CollectionMaterialsCount(
+                noderef_id=record.noderef_id,
+                title=title,
+                materials_count=record.materials_count,
+            )
+        )
 
     stats = [
-        *[CollectionMaterialsCount(
-            noderef_id=noderef_id,
-            title=title,
-            materials_count=0,
-        ) for (noderef_id, title) in descendant_collections.items()],
+        *[
+            CollectionMaterialsCount(
+                noderef_id=noderef_id, title=title, materials_count=0,
+            )
+            for (noderef_id, title) in descendant_collections.items()
+        ],
         *stats,
     ]
 
@@ -166,10 +168,8 @@ async def get_descendant_collections_materials_counts(
     tags=["Collections"],
 )
 async def get_portals(
-    *,
-    response: Response,
+    *, response: Response,
 ):
     children = await crud_collection.get_portals()
     # response.headers["X-Total-Count"] = str(len(collections))
     return children
-

@@ -130,9 +130,7 @@ async def get_descendant_collections_materials_counts(
         return DescendantCollectionsMaterialsCounts.parse_elastic_response(response)
 
 
-async def get_portals(
-    root_noderef_id: str = PORTAL_ROOT_ID, size: int = 5000,
-) -> list:
+async def get_portals(root_noderef_id: str = PORTAL_ROOT_ID, size: int = 5000,) -> list:
 
     s = Search().query(
         qbool(
@@ -144,17 +142,17 @@ async def get_portals(
         )
     )
 
-    response: Response = s.source([
-        BaseAttribute.NODEREF_ID,
-        BaseAttribute.PATH,
-        CollectionAttribute.TITLE,
-        CollectionAttribute.PARENT_ID,
-    ]).sort("fullpath.keyword")[:size].execute()
+    response: Response = s.source(
+        [
+            BaseAttribute.NODEREF_ID,
+            BaseAttribute.PATH,
+            CollectionAttribute.TITLE,
+            CollectionAttribute.PARENT_ID,
+        ]
+    ).sort("fullpath.keyword")[:size].execute()
 
     if response.success():
-        lut = {
-            PORTAL_ROOT_ID: []
-        }
+        lut = {PORTAL_ROOT_ID: []}
 
         for hit in response:
             portal = Collection.parse_elastic_hit(hit)

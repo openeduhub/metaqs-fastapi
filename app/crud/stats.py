@@ -19,19 +19,19 @@ from .elastic import (
 async def get_stats(size: int = 20000) -> dict:
 
     s = Search().query(
-        qbool(
-            filter=[
-                *type_filter[ResourceType.MATERIAL],
-                *base_filter,
-            ]
-        )
+        qbool(filter=[*type_filter[ResourceType.MATERIAL], *base_filter,])
     )
     s.aggs.bucket(
         "stats",
         acomposite(
             sources=[
-                {"materialType": A("terms", field="i18n.de_DE.ccm:educationallearningresourcetype.keyword")},
-                {"noderef_id": A("terms", field="collections.nodeRef.id.keyword")}
+                {
+                    "materialType": A(
+                        "terms",
+                        field="i18n.de_DE.ccm:educationallearningresourcetype.keyword",
+                    )
+                },
+                {"noderef_id": A("terms", field="collections.nodeRef.id.keyword")},
             ],
             size=size,
         ),
@@ -42,8 +42,8 @@ async def get_stats(size: int = 20000) -> dict:
     if response.success():
 
         def group_results(carry, stat):
-            carry[glom(stat, 'key.noderef_id')].append(
-                {glom(stat, 'key.materialType'): glom(stat, 'doc_count')}
+            carry[glom(stat, "key.noderef_id")].append(
+                {glom(stat, "key.materialType"): glom(stat, "doc_count")}
             )
 
         return merge(
