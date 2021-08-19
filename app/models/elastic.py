@@ -81,7 +81,6 @@ class ElasticAggConfig:
 
 
 class ElasticAgg(BaseModel, ABC):
-
     class Config(ElasticAggConfig):
         pass
 
@@ -113,14 +112,11 @@ class DescendantCollectionsMaterialsCounts(BucketAgg):
             response,
             (
                 "aggregations.grouped_by_collection.buckets",
-                [
-                    {
-                        "noderef_id": "key.noderef_id",
-                        "materials_count": "doc_count",
-                    }
-                ],
+                [{"noderef_id": "key.noderef_id", "materials_count": "doc_count",}],
             ),
         )
         return cls.construct(
-            results=[CollectionMaterialsCount.construct(**record) for record in results],
+            results=[
+                CollectionMaterialsCount.construct(**record) for record in results
+            ],
         )
