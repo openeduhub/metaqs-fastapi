@@ -33,15 +33,15 @@ class MissingAttributeFilter(BaseModel):
         return query_dict
 
 
-async def get_node_ref_ids() -> List[str]:
+async def get_noderef_ids() -> List[str]:
     return [
         "bd8be6d5-0fbe-4534-a4b3-773154ba6abc",  # Mathematik
         "94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e",  # Physik
     ]
 
 
-async def get_single(node_ref_id: str) -> Collection:
-    return Collection(node_ref_id=node_ref_id)
+async def get_single(noderef_id: str) -> Collection:
+    return Collection(noderef_id=noderef_id)
 
 
 async def get_many(
@@ -62,24 +62,24 @@ async def get_many(
 
 
 async def get_child_materials_with_missing_attributes(
-    collection_id: str,
+    noderef_id: str,
     missing_attr_filter: MissingMaterialAttributeFilter,
     max_hits: Optional[int] = 5000,
 ) -> List[LearningMaterial]:
     return await get_many_materials(
-        ancestor_id=collection_id,
+        ancestor_id=noderef_id,
         missing_attr_filter=missing_attr_filter,
         max_hits=max_hits,
     )
 
 
 async def get_child_collections_with_missing_attributes(
-    collection_id: str,
+    noderef_id: str,
     missing_attr_filter: MissingAttributeFilter,
     max_hits: Optional[int] = 5000,
 ) -> List[Collection]:
     return await get_many(
-        ancestor_id=collection_id,
+        ancestor_id=noderef_id,
         missing_attr_filter=missing_attr_filter,
         max_hits=max_hits,
     )

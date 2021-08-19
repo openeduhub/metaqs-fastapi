@@ -32,10 +32,10 @@ router = APIRouter()
 
 
 class CollectionNotFoundException(HTTPException):
-    def __init__(self, node_ref_id):
+    def __init__(self, noderef_id):
         super().__init__(
             status_code=HTTP_404_NOT_FOUND,
-            detail=f"Collection with id '{node_ref_id}' not found",
+            detail=f"Collection with id '{noderef_id}' not found",
         )
 
 
@@ -43,19 +43,19 @@ class CollectionNotFoundException(HTTPException):
     "/collections", tags=["Collections"],
 )
 async def get_collections():
-    return await crud_collection.get_node_ref_ids()
+    return await crud_collection.get_noderef_ids()
 
 
 # @router.get(
-#     "/collections/{node_ref_id}", tags=["Collections"],
+#     "/collections/{noderef_id}", tags=["Collections"],
 # )
-# async def get_collection(node_ref_id: str):
-#     collection = await crud_collection.get_single(node_ref_id=node_ref_id)
+# async def get_collection(noderef_id: str):
+#     collection = await crud_collection.get_single(noderef_id=noderef_id)
 #     return {"collection": collection.as_dict()}
 
 
 @router.get(
-    "/collections/{node_ref_id}/pending-materials/{missing_attr}",
+    "/collections/{noderef_id}/pending-materials/{missing_attr}",
     response_model=List[LearningMaterial],
     status_code=HTTP_200_OK,
     responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"},},
@@ -63,21 +63,21 @@ async def get_collections():
 )
 async def get_child_materials_with_missing_attributes(
     *,
-    node_ref_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
+    noderef_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
     missing_attr_filter: MissingMaterialAttributeFilter = Depends(
         materials_filter_params
     ),
     response: Response,
 ):
     materials = await crud_collection.get_child_materials_with_missing_attributes(
-        collection_id=node_ref_id, missing_attr_filter=missing_attr_filter,
+        noderef_id=noderef_id, missing_attr_filter=missing_attr_filter,
     )
     response.headers["X-Total-Count"] = str(len(materials))
     return materials
 
 
 @router.get(
-    "/collections/{node_ref_id}/pending-subcollections/{missing_attr}",
+    "/collections/{noderef_id}/pending-subcollections/{missing_attr}",
     response_model=List[Collection],
     status_code=HTTP_200_OK,
     responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"},},
@@ -85,14 +85,14 @@ async def get_child_materials_with_missing_attributes(
 )
 async def get_child_collections_with_missing_attributes(
     *,
-    node_ref_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
+    noderef_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
     missing_attr_filter: MissingCollectionAttributeFilter = Depends(
         collections_filter_params
     ),
     response: Response,
 ):
     collections = await crud_collection.get_child_collections_with_missing_attributes(
-        collection_id=node_ref_id, missing_attr_filter=missing_attr_filter,
+        noderef_id=noderef_id, missing_attr_filter=missing_attr_filter,
     )
     response.headers["X-Total-Count"] = str(len(collections))
     return collections

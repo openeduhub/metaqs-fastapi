@@ -22,7 +22,7 @@ _ELASTIC_RESOURCE = TypeVar("_ELASTIC_RESOURCE")
 
 
 class Attribute(str, Enum):
-    NODEREFID = "nodeRef.id"
+    NODEREF_ID = "nodeRef.id"
     TYPE = "type"
     PATH = "path"
     NAME = "properties.cm:name"
@@ -35,7 +35,7 @@ class ElasticConfig:
 
 class ElasticResource(BaseModel):
 
-    node_ref_id: UUID
+    noderef_id: UUID
     type: Optional[EmptyStrToNone] = None
     path: Optional[List[UUID]] = None
     name: Optional[EmptyStrToNone] = None
@@ -46,7 +46,7 @@ class ElasticResource(BaseModel):
     @classmethod
     def source_fields(cls: Type[_ELASTIC_RESOURCE],) -> List:
         return [
-            Attribute.NODEREFID,
+            Attribute.NODEREF_ID,
             Attribute.TYPE,
             Attribute.PATH,
             Attribute.NAME,
@@ -57,7 +57,7 @@ class ElasticResource(BaseModel):
         cls: Type[_ELASTIC_RESOURCE], hit: Dict,
     ) -> _ELASTIC_RESOURCE:
         return cls.construct(
-            node_ref_id=glom(hit, Attribute.NODEREFID),
+            noderef_id=glom(hit, Attribute.NODEREF_ID),
             type=glom(hit, Coalesce(Attribute.TYPE, default=None)),
             path=glom(hit, (Coalesce(Attribute.PATH, default=[]), Iter().all())),
             name=glom(hit, Coalesce(Attribute.NAME, default=None)),

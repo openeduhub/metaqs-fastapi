@@ -46,7 +46,7 @@ class CollectionBase(ElasticResource):
     @classmethod
     def parse_elastic_hit(cls: Type[_COLLECTION], hit: Dict,) -> _COLLECTION:
         return cls.construct(
-            node_ref_id=glom(hit, BaseAttribute.NODEREFID),
+            noderef_id=glom(hit, BaseAttribute.NODEREF_ID),
             type=glom(hit, Coalesce(BaseAttribute.TYPE, default=None)),
             path=glom(hit, (Coalesce(BaseAttribute.PATH, default=[]), Iter().all())),
             name=glom(hit, Coalesce(BaseAttribute.NAME, default=None)),

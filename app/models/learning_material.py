@@ -66,7 +66,7 @@ class LearningMaterialBase(ElasticResource):
         cls: Type[_LEARNING_MATERIAL], hit: Dict,
     ) -> _LEARNING_MATERIAL:
         return cls.construct(
-            node_ref_id=glom(hit, BaseAttribute.NODEREFID),
+            noderef_id=glom(hit, BaseAttribute.NODEREF_ID),
             type=glom(hit, BaseAttribute.TYPE),
             path=glom(hit, (Coalesce(BaseAttribute.PATH, default=[]), Iter().all())),
             name=glom(hit, BaseAttribute.NAME),
