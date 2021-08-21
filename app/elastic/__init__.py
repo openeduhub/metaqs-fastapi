@@ -39,9 +39,22 @@ def qboolor(conditions: List[Query]) -> Query:
     return qbool(should=conditions, minimum_should_match=1,)
 
 
+def aterms(**kwargs) -> Agg:
+    return A("terms", **kwargs)
+
+
 def acomposite(sources: List[Query], **kwargs) -> Agg:
     return A("composite", sources=sources, **kwargs)
 
 
 def abucketsort(sort: List[Query], **kwargs) -> Agg:
     return A("bucket_sort", sort=sort, **kwargs)
+
+
+def script(source: str, params: list = None) -> dict:
+    snippet = {
+        "source": source,
+    }
+    if params:
+        snippet["params"] = params
+    return snippet

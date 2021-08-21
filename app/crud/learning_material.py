@@ -5,6 +5,7 @@ from typing import (
 
 from pydantic import BaseModel
 
+from app.core.config import ELASTIC_MAX_SIZE
 from app.crud.elastic import (
     get_many_base_query,
     ResourceType,
@@ -49,7 +50,7 @@ class MissingAttributeFilter(BaseModel):
 async def get_many(
     ancestor_id: Optional[str] = None,
     missing_attr_filter: Optional[MissingAttributeFilter] = None,
-    max_hits: Optional[int] = 5000,
+    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
     query_dict = get_many_base_query(
         resource_type=ResourceType.MATERIAL, ancestor_id=ancestor_id,

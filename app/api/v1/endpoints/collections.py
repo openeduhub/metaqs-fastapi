@@ -21,17 +21,18 @@ from app.api.util import (
 )
 
 import app.crud.collection as crud_collection
+from app.core.config import PORTAL_ROOT_ID
 from app.crud import (
     MissingCollectionAttributeFilter,
     MissingMaterialAttributeFilter,
 )
+from app.crud.util import build_collection_tree
 from app.models.elastic import Attribute as ElasticResourceAttribute
 from app.models.collection import (
     Collection,
     Attribute as CollectionAttribute,
 )
 from app.models.collection_stats import CollectionMaterialsCount
-from app.models.elastic import DescendantCollectionsMaterialsCounts
 from app.models.learning_material import LearningMaterial
 
 
@@ -162,7 +163,7 @@ async def get_descendant_collections_materials_counts(
 
 @router.get(
     "/collections/tree",
-    response_model=list,
+    response_model=List[dict],
     status_code=HTTP_200_OK,
     responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"},},
     tags=["Collections"],
@@ -170,6 +171,8 @@ async def get_descendant_collections_materials_counts(
 async def get_portals(
     *, response: Response,
 ):
-    children = await crud_collection.get_portals()
-    # response.headers["X-Total-Count"] = str(len(collections))
-    return children
+    root_noderef_id = PORTAL_ROOT_ID
+    portals = await crud_collection.get_portals(root_noderef_id=root_noderef_id)
+    response.headers["X-Total-Count"] = str(len(portals))
+    tree = await build_collection_tree(portals=portals, root_noderef_id=root_noderef_id)
+    return tree

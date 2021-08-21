@@ -1,10 +1,17 @@
 import logging
 from enum import Enum
-from typing import Tuple
+from typing import (
+    List,
+    Tuple,
+)
+from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.dialects.postgresql import pypostgresql
+
+from app.core.config import PORTAL_ROOT_ID
+from app.models.collection import Collection
 
 dialect = pypostgresql.dialect(paramstyle="pyformat")
 dialect.implicit_returning = True
@@ -48,3 +55,24 @@ class OrderByParams(BaseModel):
         else:
             query = query.order_by(col.asc())
         return query
+
+
+async def build_collection_tree(
+    portals: List[Collection], root_noderef_id: UUID
+) -> List[dict]:
+    lut = {root_noderef_id: []}
+
+    for portal in portals:
+
+        try:
+            portal_node = {
+                "noderef_id": portal.noderef_id,
+                "title": portal.title,
+                "children": [],
+            }
+            lut[portal.parent_id].append(portal_node)
+            lut[portal.noderef_id] = portal_node["children"]
+        except KeyError:
+            pass
+
+    return lut[root_noderef_id]

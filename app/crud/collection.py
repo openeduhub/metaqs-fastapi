@@ -6,7 +6,10 @@ from typing import (
 from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
 
-from app.core.config import PORTAL_ROOT_ID
+from app.core.config import (
+    PORTAL_ROOT_ID,
+    ELASTIC_MAX_SIZE,
+)
 from app.elastic import (
     Search,
     qbool,
@@ -15,6 +18,7 @@ from app.elastic import (
     abucketsort,
     Q,
     A,
+    script,
 )
 from app.models.elastic import (
     Attribute as BaseAttribute,
@@ -59,7 +63,7 @@ async def get_single(noderef_id: str) -> Collection:
 async def get_many(
     ancestor_id: Optional[str] = None,
     missing_attr_filter: Optional[MissingAttributeFilter] = None,
-    max_hits: Optional[int] = 5000,
+    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
     source_fields: Optional[List[str]] = None,
 ) -> List[Collection]:
     query_dict = get_many_base_query(
@@ -79,7 +83,7 @@ async def get_many(
 async def get_child_materials_with_missing_attributes(
     noderef_id: str,
     missing_attr_filter: MissingMaterialAttributeFilter,
-    max_hits: Optional[int] = 5000,
+    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
     return await get_many_materials(
         ancestor_id=noderef_id,
@@ -91,7 +95,7 @@ async def get_child_materials_with_missing_attributes(
 async def get_child_collections_with_missing_attributes(
     noderef_id: str,
     missing_attr_filter: MissingAttributeFilter,
-    max_hits: Optional[int] = 5000,
+    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[Collection]:
     return await get_many(
         ancestor_id=noderef_id,
@@ -101,7 +105,7 @@ async def get_child_collections_with_missing_attributes(
 
 
 async def get_descendant_collections_materials_counts(
-    ancestor_id: str, size: int = 5000,
+    ancestor_id: str, size: int = ELASTIC_MAX_SIZE,
 ) -> DescendantCollectionsMaterialsCounts:
 
     s = Search().query(
@@ -130,15 +134,20 @@ async def get_descendant_collections_materials_counts(
         return DescendantCollectionsMaterialsCounts.parse_elastic_response(response)
 
 
-async def get_portals(root_noderef_id: str = PORTAL_ROOT_ID, size: int = 5000,) -> list:
+async def get_portals(
+    root_noderef_id: str = PORTAL_ROOT_ID, size: int = ELASTIC_MAX_SIZE
+) -> list:
 
-    s = Search().query(
-        qbool(
-            filter=[
-                *type_filter[ResourceType.COLLECTION],
-                *base_filter,
-                qterm(**{"path.keyword": root_noderef_id}),
-            ]
+    s = (
+        Search()
+        .query(
+            qbool(
+                filter=[
+                    *type_filter[ResourceType.COLLECTION],
+                    *base_filter,
+                    qterm(**{"path.keyword": root_noderef_id}),
+                ]
+            )
         )
     )
 
@@ -152,20 +161,4 @@ async def get_portals(root_noderef_id: str = PORTAL_ROOT_ID, size: int = 5000,) 
     ).sort("fullpath.keyword")[:size].execute()
 
     if response.success():
-        lut = {PORTAL_ROOT_ID: []}
-
-        for hit in response:
-            portal = Collection.parse_elastic_hit(hit)
-
-            try:
-                portal_node = {
-                    "noderef_id": portal.noderef_id,
-                    "title": portal.title,
-                    "children": [],
-                }
-                lut[portal.parent_id].append(portal_node)
-                lut[portal.noderef_id] = portal_node["children"]
-            except KeyError:
-                pass
-
-        return lut[PORTAL_ROOT_ID]
+        return [Collection.parse_elastic_hit(hit) for hit in response]

@@ -19,6 +19,7 @@ PORTAL_ROOT_PATH = "/".join(
         "5e40e372-735c-4b17-bbf7-e827a5702b57",
     ]
 )
+ELASTIC_MAX_SIZE = 10000
 
 PROJECT_NAME = os.getenv("PROJECT_NAME")
 API_VERSION = os.getenv("API_VERSION")
