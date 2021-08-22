@@ -17,6 +17,7 @@ alembic = "^1.6.5"
 glom = "^20.11.0"
 more-itertools = "^8.8.0"
 aioredis = "^2.0.0"
+python-slugify = "^5.0.2"
 
 [tool.poetry.dev-dependencies]
 
