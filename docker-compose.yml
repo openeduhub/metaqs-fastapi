@@ -31,7 +31,7 @@ services:
   fastapi:
     container_name: fastapi
     build: ./
-    image: community.docker.edu-sharing.com/metaqs-api--fastpi
+    image: metaqs-api-fastapi
     depends_on:
 #      - redis
       - postgres

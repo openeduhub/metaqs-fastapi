@@ -51,7 +51,7 @@ def abucketsort(sort: List[Query], **kwargs) -> Agg:
     return A("bucket_sort", sort=sort, **kwargs)
 
 
-def script(source: str, params: list = None) -> dict:
+def script(source: str, params: dict = None) -> dict:
     snippet = {
         "source": source,
     }

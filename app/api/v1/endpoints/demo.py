@@ -7,4 +7,4 @@ router = APIRouter()
     "/demo", tags=["demo"], response_model=dict,
 )
 async def demo():
-    return {"Hello": "World"}
+    return {"Hello": "OpenEduHub"}
