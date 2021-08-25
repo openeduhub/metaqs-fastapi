@@ -1,5 +1,5 @@
-from enum import Enum
 from typing import (
+    ClassVar,
     Dict,
     List,
     Optional,
@@ -12,87 +12,100 @@ from glom import (
     Coalesce,
     Iter,
 )
-from pydantic import HttpUrl
 
-from .base import ResponseModel
-from .elastic import (
-    Attribute as BaseAttribute,
-    ElasticResource,
+# from pydantic import HttpUrl
+
+from app.elastic.fields import (
+    Field,
+    FieldType,
 )
+from .base import ResponseModel
+from .elastic import ElasticResource
 from .util import EmptyStrToNone
-
 
 _LEARNING_MATERIAL = TypeVar("_LEARNING_MATERIAL")
 
 
-class Attribute(str, Enum):
-    TITLE = "properties.cclom:title"
-    KEYWORDS = "properties.cclom:general_keyword"
-    EDUCONTEXT = "properties.ccm:educationalcontext"
-    SUBJECTS = "properties.ccm:taxonid"
-    WWWURL = "properties.ccm:wwwurl"
-    DESCRIPTION = "properties.cclom:general_description"
-    LICENSES = "properties.ccm:commonlicense_key"
+class LearningMaterialAttribute(Field):
+    TITLE = ("properties.cclom:title", FieldType.TEXT)
+    KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
+    EDUCONTEXT = ("properties.ccm:educationalcontext", FieldType.TEXT)
+    SUBJECTS = ("properties.ccm:taxonid", FieldType.TEXT)
+    CONTENT_URL = ("properties.ccm:wwwurl", FieldType.TEXT)
+    DESCRIPTION = ("properties.cclom:general_description", FieldType.TEXT)
+    LICENSES = ("properties.ccm:commonlicense_key", FieldType.TEXT)
+    COLLECTION_NODEREF_ID = ("collections.nodeRef.id", FieldType.TEXT)
+    COLLECTION_PATH = ("collections.path", FieldType.TEXT)
 
 
 class LearningMaterialBase(ElasticResource):
-
     title: Optional[EmptyStrToNone] = None
     keywords: Optional[List[str]] = None
     educontext: Optional[List[str]] = None
     subjects: Optional[List[str]] = None
-    www_url: Optional[HttpUrl] = None
+    content_url: Optional[str] = None
     description: Optional[EmptyStrToNone] = None
     licenses: Optional[EmptyStrToNone] = None
 
-    @classmethod
-    def source_fields(cls: Type[_LEARNING_MATERIAL]) -> List:
-        fields = super().source_fields()
-        fields.extend(
-            [
-                Attribute.TITLE,
-                Attribute.KEYWORDS,
-                Attribute.EDUCONTEXT,
-                Attribute.SUBJECTS,
-                Attribute.WWWURL,
-                Attribute.DESCRIPTION,
-                Attribute.LICENSES,
-            ]
-        )
-        return fields
+    source_fields: ClassVar[list] = ElasticResource.source_fields
+    source_fields.extend(
+        [
+            LearningMaterialAttribute.TITLE,
+            LearningMaterialAttribute.KEYWORDS,
+            LearningMaterialAttribute.EDUCONTEXT,
+            LearningMaterialAttribute.SUBJECTS,
+            LearningMaterialAttribute.CONTENT_URL,
+            LearningMaterialAttribute.DESCRIPTION,
+            LearningMaterialAttribute.LICENSES,
+        ]
+    )
 
     @classmethod
-    def parse_elastic_hit(
-        cls: Type[_LEARNING_MATERIAL], hit: Dict,
-    ) -> _LEARNING_MATERIAL:
-        return cls.construct(
-            noderef_id=glom(hit, BaseAttribute.NODEREF_ID),
-            type=glom(hit, BaseAttribute.TYPE),
-            path=glom(hit, (Coalesce(BaseAttribute.PATH, default=[]), Iter().all())),
-            name=glom(hit, BaseAttribute.NAME),
-            title=glom(hit, Coalesce(Attribute.TITLE, default=None)),
-            keywords=glom(
-                hit, (Coalesce(Attribute.KEYWORDS, default=[]), Iter().all())
+    def parse_elastic_hit_to_dict(cls: Type[_LEARNING_MATERIAL], hit: Dict,) -> dict:
+        return {
+            **super(LearningMaterialBase, cls).parse_elastic_hit_to_dict(hit),
+            "title": glom(
+                hit, Coalesce(LearningMaterialAttribute.TITLE.path, default=None)
             ),
-            educontext=glom(
-                hit, (Coalesce(Attribute.EDUCONTEXT, default=[]), Iter().all())
-            ),
-            subjects=glom(
-                hit, (Coalesce(Attribute.SUBJECTS, default=[]), Iter().all())
-            ),
-            www_url=glom(hit, Coalesce(Attribute.WWWURL, default=None)),
-            description=glom(
+            "keywords": glom(
                 hit,
                 (
-                    Coalesce(Attribute.DESCRIPTION, default=[]),
+                    Coalesce(LearningMaterialAttribute.KEYWORDS.path, default=[]),
+                    Iter().all(),
+                ),
+            ),
+            "educontext": glom(
+                hit,
+                (
+                    Coalesce(LearningMaterialAttribute.EDUCONTEXT.path, default=[]),
+                    Iter().all(),
+                ),
+            ),
+            "subjects": glom(
+                hit,
+                (
+                    Coalesce(LearningMaterialAttribute.SUBJECTS.path, default=[]),
+                    Iter().all(),
+                ),
+            ),
+            "content_url": glom(
+                hit, Coalesce(LearningMaterialAttribute.CONTENT_URL.path, default=None)
+            ),
+            "description": glom(
+                hit,
+                (
+                    Coalesce(LearningMaterialAttribute.DESCRIPTION.path, default=[]),
                     (Iter().all(), "\n".join),
                 ),
             ),
-            licenses=glom(
+            "licenses": glom(
                 hit,
-                (Coalesce(Attribute.LICENSES, default=[]), (Iter().all(), "\n".join)),
+                (
+                    Coalesce(LearningMaterialAttribute.LICENSES.path, default=[]),
+                    (Iter().all(), "\n".join),
+                ),
             ),
-        )
+        }
 
 
 class LearningMaterial(ResponseModel, LearningMaterialBase):

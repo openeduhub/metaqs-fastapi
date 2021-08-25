@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -27,10 +28,10 @@ from app.crud import (
     MissingMaterialAttributeFilter,
 )
 from app.crud.util import build_collection_tree
-from app.models.elastic import Attribute as ElasticResourceAttribute
+from app.models.elastic import ElasticResourceAttribute
 from app.models.collection import (
     Collection,
-    Attribute as CollectionAttribute,
+    CollectionAttribute,
 )
 from app.models.collection_stats import CollectionMaterialsCount
 from app.models.learning_material import LearningMaterial
@@ -54,14 +55,6 @@ async def get_collections():
     return await crud_collection.get_noderef_ids()
 
 
-# @router.get(
-#     "/collections/{noderef_id}", tags=["Collections"],
-# )
-# async def get_collection(noderef_id: str):
-#     collection = await crud_collection.get_single(noderef_id=noderef_id)
-#     return {"collection": collection.as_dict()}
-
-
 @router.get(
     "/collections/{noderef_id}/pending-materials/{missing_attr}",
     response_model=List[LearningMaterial],
@@ -71,7 +64,7 @@ async def get_collections():
 )
 async def get_child_materials_with_missing_attributes(
     *,
-    noderef_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
+    noderef_id: UUID = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
     missing_attr_filter: MissingMaterialAttributeFilter = Depends(
         materials_filter_params
     ),
@@ -93,7 +86,7 @@ async def get_child_materials_with_missing_attributes(
 )
 async def get_child_collections_with_missing_attributes(
     *,
-    noderef_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
+    noderef_id: UUID = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
     missing_attr_filter: MissingCollectionAttributeFilter = Depends(
         collections_filter_params
     ),
@@ -115,12 +108,16 @@ async def get_child_collections_with_missing_attributes(
 )
 async def get_descendant_collections_materials_counts(
     *,
-    noderef_id: str = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
+    noderef_id: UUID = Path(..., example="94f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"),
     response: Response,
 ):
     descendant_collections = await crud_collection.get_many(
         ancestor_id=noderef_id,
-        source_fields=[ElasticResourceAttribute.NODEREF_ID, CollectionAttribute.TITLE,],
+        source_fields=[
+            ElasticResourceAttribute.NODEREF_ID,
+            CollectionAttribute.PATH,
+            CollectionAttribute.TITLE,
+        ],
     )
     materials_counts = await crud_collection.get_descendant_collections_materials_counts(
         ancestor_id=noderef_id,

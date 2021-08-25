@@ -16,6 +16,7 @@ from app.elastic import (
     aterms,
     script,
 )
+from app.models.learning_material import LearningMaterialAttribute
 from .elastic import (
     base_filter,
     ResourceType,
@@ -99,11 +100,7 @@ async def get_material_types() -> dict:
     if response.success():
         return glom(
             response.aggregations.material_types.buckets,
-            (
-                Iter("key")
-                .map(lambda k: {slugify(k): k}).all(),
-                merge,
-            ),
+            (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
         )
 
 
@@ -121,7 +118,11 @@ async def get_material_type_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
         acomposite(
             sources=[
                 {"material_type": aterms(field="material_type")},
-                {"noderef_id": aterms(field="collections.nodeRef.id.keyword")},
+                {
+                    "noderef_id": aterms(
+                        field=LearningMaterialAttribute.COLLECTION_NODEREF_ID
+                    )
+                },
             ],
             size=size,
         ),

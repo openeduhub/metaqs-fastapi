@@ -1,6 +1,6 @@
 from abc import ABC
-from enum import Enum
 from typing import (
+    ClassVar,
     Dict,
     List,
     Optional,
@@ -20,6 +20,10 @@ from glom import (
     Iter,
 )
 
+from app.elastic.fields import (
+    Field,
+    FieldType,
+)
 from .base import BaseModel
 from .util import EmptyStrToNone
 
@@ -31,11 +35,13 @@ _DESCENDANT_COLLECTIONS_MATERIALS_COUNTS = TypeVar(
 )
 
 
-class Attribute(str, Enum):
-    NODEREF_ID = "nodeRef.id"
-    TYPE = "type"
-    PATH = "path"
-    NAME = "properties.cm:name"
+class ElasticResourceAttribute(Field):
+    NODEREF_ID = ("nodeRef.id", FieldType.KEYWORD)
+    TYPE = ("type", FieldType.KEYWORD)
+    NAME = ("properties.cm:name", FieldType.TEXT)
+    PERMISSION_READ = ("permissions.read", FieldType.TEXT)
+    EDU_METADATASET = ("properties.cm:edu_metadataset", FieldType.TEXT)
+    PROTOCOL = ("nodeRef.storeRef.protocol", FieldType.TEXT)
 
 
 class ElasticConfig:
@@ -44,34 +50,36 @@ class ElasticConfig:
 
 
 class ElasticResource(BaseModel):
-
     noderef_id: UUID
     type: Optional[EmptyStrToNone] = None
-    path: Optional[List[UUID]] = None
     name: Optional[EmptyStrToNone] = None
+
+    source_fields: ClassVar[list] = [
+        ElasticResourceAttribute.NODEREF_ID,
+        ElasticResourceAttribute.TYPE,
+        ElasticResourceAttribute.NAME,
+    ]
 
     class Config(ElasticConfig):
         pass
 
     @classmethod
-    def source_fields(cls: Type[_ELASTIC_RESOURCE],) -> List:
-        return [
-            Attribute.NODEREF_ID,
-            Attribute.TYPE,
-            Attribute.PATH,
-            Attribute.NAME,
-        ]
+    def parse_elastic_hit_to_dict(cls: Type[_ELASTIC_RESOURCE], hit: Dict,) -> dict:
+        return {
+            "noderef_id": glom(hit, ElasticResourceAttribute.NODEREF_ID.path),
+            "type": glom(
+                hit, Coalesce(ElasticResourceAttribute.TYPE.path, default=None)
+            ),
+            "name": glom(
+                hit, Coalesce(ElasticResourceAttribute.NAME.path, default=None)
+            ),
+        }
 
     @classmethod
     def parse_elastic_hit(
         cls: Type[_ELASTIC_RESOURCE], hit: Dict,
     ) -> _ELASTIC_RESOURCE:
-        return cls.construct(
-            noderef_id=glom(hit, Attribute.NODEREF_ID),
-            type=glom(hit, Coalesce(Attribute.TYPE, default=None)),
-            path=glom(hit, (Coalesce(Attribute.PATH, default=[]), Iter().all())),
-            name=glom(hit, Coalesce(Attribute.NAME, default=None)),
-        )
+        return cls.construct(**cls.parse_elastic_hit_to_dict(hit))
 
 
 class ElasticAggConfig:

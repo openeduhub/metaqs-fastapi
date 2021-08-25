@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.dialects.postgresql import pypostgresql
 
-from app.core.config import PORTAL_ROOT_ID
 from app.models.collection import Collection
 
 dialect = pypostgresql.dialect(paramstyle="pyformat")

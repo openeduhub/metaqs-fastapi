@@ -2,6 +2,7 @@ from typing import (
     List,
     Optional,
 )
+from uuid import UUID
 
 from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
@@ -14,21 +15,23 @@ from app.elastic import (
     Search,
     qbool,
     qterm,
+    qwildcard,
     acomposite,
     abucketsort,
-    Q,
-    A,
-    script,
+    aterms,
 )
 from app.models.elastic import (
-    Attribute as BaseAttribute,
     DescendantCollectionsMaterialsCounts,
+    ElasticResourceAttribute,
 )
 from app.models.collection import (
-    Attribute as CollectionAttribute,
     Collection,
+    CollectionAttribute,
 )
-from app.models.learning_material import LearningMaterial
+from app.models.learning_material import (
+    LearningMaterial,
+    LearningMaterialAttribute,
+)
 from .elastic import (
     base_filter,
     get_many_base_query,
@@ -45,7 +48,7 @@ class MissingAttributeFilter(BaseModel):
     attr: CollectionAttribute
 
     def __call__(self, query_dict: dict):
-        query_dict["must_not"] = Q("wildcard", **{self.attr.value: "*"})
+        query_dict["must_not"] = qwildcard(field=self.attr, value="*")
         return query_dict
 
 
@@ -56,32 +59,34 @@ async def get_noderef_ids() -> List[str]:
     ]
 
 
-async def get_single(noderef_id: str) -> Collection:
+async def get_single(noderef_id: UUID) -> Collection:
     return Collection(noderef_id=noderef_id)
 
 
 async def get_many(
-    ancestor_id: Optional[str] = None,
+    ancestor_id: Optional[UUID] = None,
     missing_attr_filter: Optional[MissingAttributeFilter] = None,
     max_hits: Optional[int] = ELASTIC_MAX_SIZE,
     source_fields: Optional[List[str]] = None,
 ) -> List[Collection]:
+
     query_dict = get_many_base_query(
         resource_type=ResourceType.COLLECTION, ancestor_id=ancestor_id,
     )
     if missing_attr_filter:
         query_dict = missing_attr_filter(query_dict=query_dict)
-    s = Search()
-    s.query = qbool(**query_dict)
-    response = s.source(source_fields if source_fields else Collection.source_fields())[
+    s = Search().query(qbool(**query_dict))
+
+    response = s.source(source_fields if source_fields else Collection.source_fields)[
         :max_hits
     ].execute()
+
     if response.success():
         return [Collection.parse_elastic_hit(hit) for hit in response]
 
 
 async def get_child_materials_with_missing_attributes(
-    noderef_id: str,
+    noderef_id: UUID,
     missing_attr_filter: MissingMaterialAttributeFilter,
     max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
@@ -93,7 +98,7 @@ async def get_child_materials_with_missing_attributes(
 
 
 async def get_child_collections_with_missing_attributes(
-    noderef_id: str,
+    noderef_id: UUID,
     missing_attr_filter: MissingAttributeFilter,
     max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[Collection]:
@@ -105,7 +110,7 @@ async def get_child_collections_with_missing_attributes(
 
 
 async def get_descendant_collections_materials_counts(
-    ancestor_id: str, size: int = ELASTIC_MAX_SIZE,
+    ancestor_id: UUID, size: int = ELASTIC_MAX_SIZE,
 ) -> DescendantCollectionsMaterialsCounts:
 
     s = Search().query(
@@ -113,7 +118,9 @@ async def get_descendant_collections_materials_counts(
             filter=[
                 *type_filter[ResourceType.MATERIAL],
                 *base_filter,
-                qterm(**{"collections.path.keyword": ancestor_id}),
+                qterm(
+                    field=LearningMaterialAttribute.COLLECTION_PATH, value=ancestor_id
+                ),
             ]
         )
     )
@@ -121,7 +128,11 @@ async def get_descendant_collections_materials_counts(
         "grouped_by_collection",
         acomposite(
             sources=[
-                {"noderef_id": A("terms", field="collections.nodeRef.id.keyword")}
+                {
+                    "noderef_id": aterms(
+                        field=LearningMaterialAttribute.COLLECTION_NODEREF_ID
+                    )
+                }
             ],
             size=size,
         ),
@@ -138,24 +149,21 @@ async def get_portals(
     root_noderef_id: str = PORTAL_ROOT_ID, size: int = ELASTIC_MAX_SIZE
 ) -> list:
 
-    s = (
-        Search()
-        .query(
-            qbool(
-                filter=[
-                    *type_filter[ResourceType.COLLECTION],
-                    *base_filter,
-                    qterm(**{"path.keyword": root_noderef_id}),
-                ]
-            )
+    s = Search().query(
+        qbool(
+            filter=[
+                *type_filter[ResourceType.COLLECTION],
+                *base_filter,
+                qterm(field=CollectionAttribute.PATH, value=root_noderef_id),
+            ]
         )
     )
 
     response: Response = s.source(
         [
-            BaseAttribute.NODEREF_ID,
-            BaseAttribute.PATH,
+            ElasticResourceAttribute.NODEREF_ID,
             CollectionAttribute.TITLE,
+            CollectionAttribute.PATH,
             CollectionAttribute.PARENT_ID,
         ]
     ).sort("fullpath.keyword")[:size].execute()

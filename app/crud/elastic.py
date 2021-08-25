@@ -1,10 +1,12 @@
 from enum import Enum
 from typing import Optional
+from uuid import UUID
 
 from app.elastic import (
     qterm,
     qmatch,
 )
+from app.models.elastic import ElasticResourceAttribute
 
 
 class ResourceType(str, Enum):
@@ -13,19 +15,23 @@ class ResourceType(str, Enum):
 
 
 base_filter = [
-    qterm(**{"permissions.read.keyword": "GROUP_EVERYONE"}),
-    qterm(**{"properties.cm:edu_metadataset.keyword": "mds_oeh"}),
-    qterm(**{"nodeRef.storeRef.protocol.keyword": "workspace"}),
+    qterm(field=ElasticResourceAttribute.PERMISSION_READ, value="GROUP_EVERYONE"),
+    qterm(field=ElasticResourceAttribute.EDU_METADATASET, value="mds_oeh"),
+    qterm(field=ElasticResourceAttribute.PROTOCOL, value="workspace"),
 ]
 
 type_filter = {
-    ResourceType.COLLECTION: [qterm(type="ccm:map"),],
-    ResourceType.MATERIAL: [qterm(type="ccm:io"),],
+    ResourceType.COLLECTION: [
+        qterm(field=ElasticResourceAttribute.TYPE, value="ccm:map"),
+    ],
+    ResourceType.MATERIAL: [
+        qterm(field=ElasticResourceAttribute.TYPE, value="ccm:io"),
+    ],
 }
 
 
 def get_many_base_query(
-    resource_type: ResourceType, ancestor_id: Optional[str] = None,
+    resource_type: ResourceType, ancestor_id: Optional[UUID] = None,
 ) -> dict:
     query_dict = {"filter": type_filter[resource_type]}
     query_dict["filter"].extend(base_filter)

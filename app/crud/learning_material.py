@@ -2,6 +2,7 @@ from typing import (
     List,
     Optional,
 )
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -16,39 +17,39 @@ from app.elastic import (
     qbool,
     qnotexists,
     qboolor,
-    Q,
+    qwildcard,
 )
 from app.models.learning_material import (
-    Attribute as MaterialAttribute,
     LearningMaterial,
+    LearningMaterialAttribute,
 )
 
 
 class MissingAttributeFilter(BaseModel):
-    attr: MaterialAttribute
+    attr: LearningMaterialAttribute
 
     def __call__(self, query_dict: dict):
-        if self.attr == MaterialAttribute.LICENSES:
-            keyword = f"{self.attr.value}.keyword"
+        if self.attr == LearningMaterialAttribute.LICENSES:
             query_dict["filter"].extend(
                 [
                     qboolor(
                         [
                             qterms(
-                                **{keyword: ["UNTERRICHTS_UND_LEHRMEDIEN", "NONE", ""]}
+                                field=self.attr,
+                                values=["UNTERRICHTS_UND_LEHRMEDIEN", "NONE", ""],
                             ),
-                            qnotexists(field=self.attr.value),
+                            qnotexists(field=self.attr.path),
                         ]
                     )
                 ]
             )
         else:
-            query_dict["must_not"] = Q("wildcard", **{self.attr.value: "*"})
+            query_dict["must_not"] = qwildcard(field=self.attr, value="*")
         return query_dict
 
 
 async def get_many(
-    ancestor_id: Optional[str] = None,
+    ancestor_id: Optional[UUID] = None,
     missing_attr_filter: Optional[MissingAttributeFilter] = None,
     max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
@@ -59,6 +60,6 @@ async def get_many(
         query_dict = missing_attr_filter(query_dict=query_dict)
     s = Search()
     s.query = qbool(**query_dict)
-    response = s.source(LearningMaterial.source_fields())[:max_hits].execute()
+    response = s.source(LearningMaterial.source_fields)[:max_hits].execute()
     if response.success():
         return [LearningMaterial.parse_elastic_hit(hit) for hit in response]

@@ -7,10 +7,8 @@ from fastapi import (
 from pydantic import BaseModel
 from starlette.responses import Response
 
-from app.models import (
-    CollectionAttribute,
-    MaterialAttribute,
-)
+from app.models.collection import CollectionAttribute
+from app.models.learning_material import LearningMaterialAttribute
 from app.crud import (
     MissingCollectionAttributeFilter,
     MissingMaterialAttributeFilter,
@@ -24,7 +22,7 @@ def collections_filter_params(
 
 
 def materials_filter_params(
-    *, missing_attr: MaterialAttribute = Path(...)
+    *, missing_attr: LearningMaterialAttribute = Path(...)
 ) -> MissingMaterialAttributeFilter:
     return MissingMaterialAttributeFilter(attr=missing_attr)
 
