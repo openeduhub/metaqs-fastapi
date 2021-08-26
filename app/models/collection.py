@@ -37,7 +37,7 @@ class _CollectionAttribute(Field):
     TITLE = ("properties.cm:title", FieldType.TEXT)
     KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
     DESCRIPTION = ("properties.cm:description", FieldType.TEXT)
-    PATH = ("path", FieldType.TEXT)
+    PATH = ("path", FieldType.KEYWORD)
     PARENT_ID = ("parentRef.id", FieldType.KEYWORD)
 
 

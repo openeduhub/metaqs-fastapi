@@ -38,10 +38,10 @@ class ElasticResourceAttribute(Field):
     NODEREF_ID = ("nodeRef.id", FieldType.KEYWORD)
     TYPE = ("type", FieldType.KEYWORD)
     NAME = ("properties.cm:name", FieldType.TEXT)
-    PERMISSION_READ = ("permissions.read", FieldType.TEXT)
+    PERMISSION_READ = ("permissions.Read", FieldType.TEXT)
     EDU_METADATASET = ("properties.cm:edu_metadataset", FieldType.TEXT)
-    PROTOCOL = ("nodeRef.storeRef.protocol", FieldType.TEXT)
-    FULLPATH = ("fullpath", FieldType.TEXT)
+    PROTOCOL = ("nodeRef.storeRef.protocol", FieldType.KEYWORD)
+    FULLPATH = ("fullpath", FieldType.KEYWORD)
 
 
 class ElasticConfig:
