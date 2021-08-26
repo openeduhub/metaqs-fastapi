@@ -35,16 +35,16 @@ class MissingAttributeFilter(BaseModel):
                     qboolor(
                         [
                             qterms(
-                                field=self.attr,
+                                qfield=self.attr,
                                 values=["UNTERRICHTS_UND_LEHRMEDIEN", "NONE", ""],
                             ),
-                            qnotexists(field=self.attr.path),
+                            qnotexists(qfield=self.attr.path),
                         ]
                     )
                 ]
             )
         else:
-            query_dict["must_not"] = qwildcard(field=self.attr, value="*")
+            query_dict["must_not"] = qwildcard(qfield=self.attr, value="*")
         return query_dict
 
 

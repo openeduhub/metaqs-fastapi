@@ -15,17 +15,17 @@ class ResourceType(str, Enum):
 
 
 base_filter = [
-    qterm(field=ElasticResourceAttribute.PERMISSION_READ, value="GROUP_EVERYONE"),
-    qterm(field=ElasticResourceAttribute.EDU_METADATASET, value="mds_oeh"),
-    qterm(field=ElasticResourceAttribute.PROTOCOL, value="workspace"),
+    qterm(qfield=ElasticResourceAttribute.PERMISSION_READ, value="GROUP_EVERYONE"),
+    qterm(qfield=ElasticResourceAttribute.EDU_METADATASET, value="mds_oeh"),
+    qterm(qfield=ElasticResourceAttribute.PROTOCOL, value="workspace"),
 ]
 
 type_filter = {
     ResourceType.COLLECTION: [
-        qterm(field=ElasticResourceAttribute.TYPE, value="ccm:map"),
+        qterm(qfield=ElasticResourceAttribute.TYPE, value="ccm:map"),
     ],
     ResourceType.MATERIAL: [
-        qterm(field=ElasticResourceAttribute.TYPE, value="ccm:io"),
+        qterm(qfield=ElasticResourceAttribute.TYPE, value="ccm:io"),
     ],
 }
 

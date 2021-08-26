@@ -14,14 +14,14 @@ from .fields import (
 )
 
 
-def _extract_terms_key(field: Union[Field, str]) -> str:
-    if isinstance(field, Field):
-        field_key = field.path
-        if field.field_type is FieldType.TEXT:
-            field_key = f"{field_key}.keyword"
-        return field_key
+def _extract_terms_key(qfield: Union[Field, str]) -> str:
+    if isinstance(qfield, Field):
+        qfield_key = qfield.path
+        if qfield.field_type is FieldType.TEXT:
+            qfield_key = f"{qfield_key}.keyword"
+        return qfield_key
     else:
-        return field
+        return qfield
 
 
 class Search(ElasticSearch):
@@ -37,13 +37,21 @@ class Search(ElasticSearch):
         return super(Search, self).source(source_fields, **kwargs)
 
 
-def qterm(field: Union[Field, str], value, **kwargs) -> Query:
-    kwargs[_extract_terms_key(field)] = value
+def qsimplequerystring(query: str, qfields: List[Union[Field, str]], **kwargs) -> Query:
+    kwargs["query"] = query
+    kwargs["fields"] = [
+        (qfield.path if isinstance(qfield, Field) else qfield) for qfield in qfields
+    ]
+    return Q("simple_query_string", **kwargs)
+
+
+def qterm(qfield: Union[Field, str], value, **kwargs) -> Query:
+    kwargs[_extract_terms_key(qfield)] = value
     return Q("term", **kwargs)
 
 
-def qterms(field: Union[Field, str], values: list, **kwargs) -> Query:
-    kwargs[_extract_terms_key(field)] = values
+def qterms(qfield: Union[Field, str], values: list, **kwargs) -> Query:
+    kwargs[_extract_terms_key(qfield)] = values
     return Q("terms", **kwargs)
 
 
@@ -51,10 +59,10 @@ def qmatch(**kwargs) -> Query:
     return Q("match", **kwargs)
 
 
-def qwildcard(field: Union[Field, str], value, **kwargs) -> Query:
-    if isinstance(field, Field):
-        field = field.path
-    kwargs[field] = value
+def qwildcard(qfield: Union[Field, str], value, **kwargs) -> Query:
+    if isinstance(qfield, Field):
+        qfield = qfield.path
+    kwargs[qfield] = value
     return Q("wildcard", **kwargs)
 
 
@@ -62,22 +70,22 @@ def qbool(**kwargs) -> Query:
     return Q("bool", **kwargs)
 
 
-def qexists(field: Union[Field, str], **kwargs) -> Query:
-    if isinstance(field, Field):
-        field = field.path
-    return Q("exists", field=field, **kwargs)
+def qexists(qfield: Union[Field, str], **kwargs) -> Query:
+    if isinstance(qfield, Field):
+        qfield = qfield.path
+    return Q("exists", field=qfield, **kwargs)
 
 
-def qnotexists(field: str) -> Query:
-    return qbool(must_not=qexists(field))
+def qnotexists(qfield: str) -> Query:
+    return qbool(must_not=qexists(qfield))
 
 
 def qboolor(conditions: List[Query]) -> Query:
     return qbool(should=conditions, minimum_should_match=1,)
 
 
-def aterms(field: Union[Field, str], **kwargs) -> Agg:
-    kwargs["field"] = _extract_terms_key(field)
+def aterms(qfield: Union[Field, str], **kwargs) -> Agg:
+    kwargs["field"] = _extract_terms_key(qfield)
     return A("terms", **kwargs)
 
 

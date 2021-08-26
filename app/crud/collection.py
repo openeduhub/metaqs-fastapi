@@ -48,7 +48,7 @@ class MissingAttributeFilter(BaseModel):
     attr: CollectionAttribute
 
     def __call__(self, query_dict: dict):
-        query_dict["must_not"] = qwildcard(field=self.attr, value="*")
+        query_dict["must_not"] = qwildcard(qfield=self.attr, value="*")
         return query_dict
 
 
@@ -119,7 +119,7 @@ async def get_descendant_collections_materials_counts(
                 *type_filter[ResourceType.MATERIAL],
                 *base_filter,
                 qterm(
-                    field=LearningMaterialAttribute.COLLECTION_PATH, value=ancestor_id
+                    qfield=LearningMaterialAttribute.COLLECTION_PATH, value=ancestor_id
                 ),
             ]
         )
@@ -130,7 +130,7 @@ async def get_descendant_collections_materials_counts(
             sources=[
                 {
                     "noderef_id": aterms(
-                        field=LearningMaterialAttribute.COLLECTION_NODEREF_ID
+                        qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
                     )
                 }
             ],
@@ -154,7 +154,7 @@ async def get_portals(
             filter=[
                 *type_filter[ResourceType.COLLECTION],
                 *base_filter,
-                qterm(field=CollectionAttribute.PATH, value=root_noderef_id),
+                qterm(qfield=CollectionAttribute.PATH, value=root_noderef_id),
             ]
         )
     )

@@ -12,6 +12,7 @@ from app.core.util import slugify
 from app.elastic import (
     Search,
     qbool,
+    qsimplequerystring,
     acomposite,
     aterms,
     script,
@@ -92,7 +93,7 @@ async def get_material_types() -> dict:
         .extra(runtime_mappings=_runtime_mapping_material_type)
     )
     s.aggs.bucket(
-        "material_types", aterms(field="material_type", size=ELASTIC_MAX_SIZE)
+        "material_types", aterms(qfield="material_type", size=ELASTIC_MAX_SIZE)
     )
 
     response: Response = s[:0].execute()
@@ -111,16 +112,16 @@ async def get_material_type_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
         .extra(runtime_mappings=_runtime_mapping_material_type)
     )
     s.aggs.bucket(
-        "material_types", aterms(field="material_type", size=ELASTIC_MAX_SIZE)
+        "material_types", aterms(qfield="material_type", size=ELASTIC_MAX_SIZE)
     )
     s.aggs.bucket(
         "stats",
         acomposite(
             sources=[
-                {"material_type": aterms(field="material_type")},
+                {"material_type": aterms(qfield="material_type")},
                 {
                     "noderef_id": aterms(
-                        field=LearningMaterialAttribute.COLLECTION_NODEREF_ID
+                        qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
                     )
                 },
             ],
@@ -144,3 +145,23 @@ async def get_material_type_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
             op=group_results,
             init=lambda: defaultdict(lambda: {"total": 0}),
         )
+
+
+async def get_search_stats() -> dict:
+    s = Search().query(
+        qsimplequerystring(query="stalin", qfields=[
+            LearningMaterialAttribute.TITLE,
+            LearningMaterialAttribute.KEYWORDS,
+            LearningMaterialAttribute.DESCRIPTION,
+            LearningMaterialAttribute.CONTENT_FULLTEXT,
+        ])
+    )
+
+    response: Response = s[:0].execute()
+
+    if response.success():
+        return {"total": response.hits.total.value}
+
+
+async def run_search_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
+    return {}

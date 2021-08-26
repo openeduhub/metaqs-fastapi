@@ -36,6 +36,7 @@ class LearningMaterialAttribute(Field):
     LICENSES = ("properties.ccm:commonlicense_key", FieldType.TEXT)
     COLLECTION_NODEREF_ID = ("collections.nodeRef.id", FieldType.TEXT)
     COLLECTION_PATH = ("collections.path", FieldType.TEXT)
+    CONTENT_FULLTEXT = ("content.fulltext", FieldType.TEXT)
 
 
 class LearningMaterialBase(ElasticResource):
@@ -43,7 +44,7 @@ class LearningMaterialBase(ElasticResource):
     keywords: Optional[List[str]] = None
     educontext: Optional[List[str]] = None
     subjects: Optional[List[str]] = None
-    content_url: Optional[str] = None
+    www_url: Optional[str] = None
     description: Optional[EmptyStrToNone] = None
     licenses: Optional[EmptyStrToNone] = None
 

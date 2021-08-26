@@ -37,6 +37,7 @@ services:
       - postgres
       - elasticsearch
     environment:
+      - API_KEY=${API_KEY}
       - PROJECT_NAME="MetaQS API"
       - API_VERSION=${API_VERSION:-v1}
       - LOG_LEVEL=error

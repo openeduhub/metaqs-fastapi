@@ -3,6 +3,9 @@ import os
 from databases import DatabaseURL
 from starlette.datastructures import CommaSeparatedStrings
 
+API_KEY = os.getenv("API_KEY")
+API_KEY_NAME = "X-API-KEY"
+
 PORTAL_ROOT_ID = "5e40e372-735c-4b17-bbf7-e827a5702b57"
 PORTAL_ROOT_PATH = "/".join(
     [

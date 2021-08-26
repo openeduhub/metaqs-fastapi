@@ -8,8 +8,9 @@ services:
 
   fastapi:
     container_name: fastapi
-    image: community.docker.edu-sharing.com/metaqs-api--fastpi:latest
+    image: community.docker.edu-sharing.com/metaqs-api-fastpi:latest
     environment:
+      - API_KEY=${API_KEY}
       - PROJECT_NAME="MetaQS API"
       - API_VERSION=v1
       - LOG_LEVEL=error
