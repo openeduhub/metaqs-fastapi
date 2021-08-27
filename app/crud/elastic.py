@@ -33,8 +33,7 @@ type_filter = {
 def get_many_base_query(
     resource_type: ResourceType, ancestor_id: Optional[UUID] = None,
 ) -> dict:
-    query_dict = {"filter": type_filter[resource_type]}
-    query_dict["filter"].extend(base_filter)
+    query_dict = {"filter": [*base_filter, *type_filter[resource_type]]}
     if ancestor_id:
         prefix = "collections." if resource_type == ResourceType.MATERIAL else ""
         query_dict["should"] = [

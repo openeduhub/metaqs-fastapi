@@ -88,7 +88,7 @@ _runtime_mapping_material_type = {
 async def get_material_types() -> dict:
     s = (
         Search()
-        .query(qbool(filter=[*type_filter[ResourceType.MATERIAL], *base_filter,]))
+        .query(qbool(filter=[*base_filter, *type_filter[ResourceType.MATERIAL]]))
         .extra(runtime_mappings=_runtime_mapping_material_type)
     )
     s.aggs.bucket(
