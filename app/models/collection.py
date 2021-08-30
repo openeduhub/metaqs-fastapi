@@ -1,3 +1,5 @@
+from __future__ import annotations
+from itertools import chain
 from typing import (
     ClassVar,
     Dict,
@@ -18,19 +20,34 @@ from app.elastic.fields import (
     Field,
     FieldType,
 )
-from .base import ResponseModel
-from .elastic import ElasticResource
+from .base import (
+    BaseModel,
+    ResponseModel,
+)
+from .elastic import (
+    ElasticResource,
+    ElasticResourceAttribute,
+)
 from .util import EmptyStrToNone
 
 _COLLECTION = TypeVar("_COLLECTION")
 
 
-class CollectionAttribute(Field):
+class _CollectionAttribute(Field):
     TITLE = ("properties.cm:title", FieldType.TEXT)
     KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
     DESCRIPTION = ("properties.cm:description", FieldType.TEXT)
     PATH = ("path", FieldType.TEXT)
     PARENT_ID = ("parentRef.id", FieldType.KEYWORD)
+
+
+CollectionAttribute = Field(
+    "CollectionAttribute",
+    [
+        (f.name, (f.value, f.field_type))
+        for f in chain(ElasticResourceAttribute, _CollectionAttribute)
+    ],
+)
 
 
 class CollectionBase(ElasticResource):
@@ -40,44 +57,55 @@ class CollectionBase(ElasticResource):
     path: Optional[List[UUID]] = None
     parent_id: Optional[UUID] = None
 
-    source_fields: ClassVar[list] = ElasticResource.source_fields
-    source_fields.extend(
-        [
-            CollectionAttribute.TITLE,
-            CollectionAttribute.KEYWORDS,
-            CollectionAttribute.DESCRIPTION,
-            CollectionAttribute.PATH,
-            CollectionAttribute.PARENT_ID,
-        ]
-    )
+    source_fields: ClassVar[set] = {
+        CollectionAttribute.NODEREF_ID,
+        CollectionAttribute.TYPE,
+        CollectionAttribute.NAME,
+        CollectionAttribute.TITLE,
+        CollectionAttribute.KEYWORDS,
+        CollectionAttribute.DESCRIPTION,
+        CollectionAttribute.PATH,
+        CollectionAttribute.PARENT_ID,
+    }
 
     @classmethod
     def parse_elastic_hit_to_dict(cls: Type[_COLLECTION], hit: Dict,) -> dict:
+        spec = {
+            "title": Coalesce(CollectionAttribute.TITLE.path, default=None),
+            "keywords": (
+                Coalesce(CollectionAttribute.KEYWORDS.path, default=[]),
+                Iter().all(),
+            ),
+            "description": Coalesce(CollectionAttribute.DESCRIPTION.path, default=None),
+            "path": (
+                Coalesce(CollectionAttribute.PATH.path, default=[]),
+                Iter().all(),
+            ),
+            "parent_id": Coalesce(CollectionAttribute.PARENT_ID.path, default=None),
+        }
         return {
             **super(CollectionBase, cls).parse_elastic_hit_to_dict(hit),
-            "title": glom(hit, Coalesce(CollectionAttribute.TITLE.path, default=None)),
-            "keywords": glom(
-                hit,
-                (Coalesce(CollectionAttribute.KEYWORDS.path, default=[]), Iter().all()),
-            ),
-            "description": glom(
-                hit, Coalesce(CollectionAttribute.DESCRIPTION.path, default=None)
-            ),
-            "path": glom(
-                hit,
-                (Coalesce(CollectionAttribute.PATH.path, default=[]), Iter().all(),),
-            ),
-            "parent_id": glom(
-                hit, Coalesce(CollectionAttribute.PARENT_ID.path, default=None)
-            ),
+            **glom(hit, spec),
         }
 
     @classmethod
     def parse_elastic_hit(cls: Type[_COLLECTION], hit: Dict,) -> _COLLECTION:
         collection = cls.construct(**cls.parse_elastic_hit_to_dict(hit))
-        collection.parent_id = collection.path[-1]
+        try:
+            collection.parent_id = collection.path[-1]
+        except IndexError:
+            pass
         return collection
 
 
 class Collection(ResponseModel, CollectionBase):
     pass
+
+
+class PortalTreeNode(BaseModel):
+    noderef_id: UUID
+    title: str
+    children: List[PortalTreeNode]
+
+
+PortalTreeNode.update_forward_refs()

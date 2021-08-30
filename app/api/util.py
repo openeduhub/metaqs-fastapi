@@ -1,4 +1,8 @@
-from typing import Optional
+from typing import (
+    Optional,
+    List,
+    Set,
+)
 
 from fastapi import (
     Path,
@@ -7,22 +11,59 @@ from fastapi import (
 from pydantic import BaseModel
 from starlette.responses import Response
 
+from app.elastic.fields import Field
 from app.models.collection import CollectionAttribute
 from app.models.learning_material import LearningMaterialAttribute
 from app.crud import (
+    MissingCollectionField,
+    MissingMaterialField,
     MissingCollectionAttributeFilter,
     MissingMaterialAttributeFilter,
 )
 
 
+CollectionResponseField = Field(
+    "CollectionAttribute",
+    [(f.name, (f.value, f.field_type)) for f in CollectionAttribute],
+)
+
+
+def collection_response_fields(
+    *, response_fields: Set[CollectionResponseField] = Query(None)
+) -> Set[CollectionAttribute]:
+    return response_fields
+
+
+LearningMaterialResponseField = Field(
+    "MaterialAttribute",
+    [(f.name, (f.value, f.field_type)) for f in LearningMaterialAttribute],
+)
+
+
+def material_response_fields(
+    *, response_fields: Set[LearningMaterialResponseField] = Query(None)
+) -> Set[LearningMaterialAttribute]:
+    return response_fields
+
+
+def filter_response_fields(
+    items: List[BaseModel], response_fields: Set[Field] = None
+) -> List[BaseModel]:
+    if response_fields:
+        return [
+            i.copy(include={f.name.lower() for f in response_fields}) for i in items
+        ]
+    return items
+
+
 def collections_filter_params(
-    *, missing_attr: CollectionAttribute = Path(...)
+    *, missing_attr: MissingCollectionField = Path(...)
 ) -> MissingCollectionAttributeFilter:
     return MissingCollectionAttributeFilter(attr=missing_attr)
 
 
 def materials_filter_params(
-    *, missing_attr: LearningMaterialAttribute = Path(...)
+    *, missing_attr: MissingMaterialField = Path(...)
 ) -> MissingMaterialAttributeFilter:
     return MissingMaterialAttributeFilter(attr=missing_attr)
 

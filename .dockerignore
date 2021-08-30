@@ -2,6 +2,7 @@
 README.md
 Dockerfile
 docker-compose.*
+.github/
 .idea/
 .git/
 .gitignore

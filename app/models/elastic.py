@@ -17,7 +17,6 @@ from pydantic import (
 from glom import (
     glom,
     Coalesce,
-    Iter,
 )
 
 from app.elastic.fields import (
@@ -42,6 +41,7 @@ class ElasticResourceAttribute(Field):
     PERMISSION_READ = ("permissions.read", FieldType.TEXT)
     EDU_METADATASET = ("properties.cm:edu_metadataset", FieldType.TEXT)
     PROTOCOL = ("nodeRef.storeRef.protocol", FieldType.TEXT)
+    FULLPATH = ("fullpath", FieldType.TEXT)
 
 
 class ElasticConfig:
@@ -54,26 +54,23 @@ class ElasticResource(BaseModel):
     type: Optional[EmptyStrToNone] = None
     name: Optional[EmptyStrToNone] = None
 
-    source_fields: ClassVar[list] = [
+    source_fields: ClassVar[set] = {
         ElasticResourceAttribute.NODEREF_ID,
         ElasticResourceAttribute.TYPE,
         ElasticResourceAttribute.NAME,
-    ]
+    }
 
     class Config(ElasticConfig):
         pass
 
     @classmethod
     def parse_elastic_hit_to_dict(cls: Type[_ELASTIC_RESOURCE], hit: Dict,) -> dict:
-        return {
-            "noderef_id": glom(hit, ElasticResourceAttribute.NODEREF_ID.path),
-            "type": glom(
-                hit, Coalesce(ElasticResourceAttribute.TYPE.path, default=None)
-            ),
-            "name": glom(
-                hit, Coalesce(ElasticResourceAttribute.NAME.path, default=None)
-            ),
+        spec = {
+            "noderef_id": ElasticResourceAttribute.NODEREF_ID.path,
+            "type": Coalesce(ElasticResourceAttribute.TYPE.path, default=None),
+            "name": Coalesce(ElasticResourceAttribute.NAME.path, default=None),
         }
+        return glom(hit, spec)
 
     @classmethod
     def parse_elastic_hit(

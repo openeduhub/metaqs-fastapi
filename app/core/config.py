@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from databases import DatabaseURL
 from starlette.datastructures import CommaSeparatedStrings
@@ -24,6 +25,7 @@ PORTAL_ROOT_PATH = "/".join(
 )
 ELASTIC_MAX_SIZE = 10000
 
+DATA_DIR = Path("/var/lib/fastapi/data")
 PROJECT_NAME = os.getenv("PROJECT_NAME")
 API_VERSION = os.getenv("API_VERSION")
 LOG_LEVEL = os.getenv("LOG_LEVEL")

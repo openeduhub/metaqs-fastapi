@@ -4,9 +4,9 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
-
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
+from starlette_context.middleware import RawContextMiddleware
 
 from app.api import router as api_router
 from app.core.config import (
@@ -24,7 +24,6 @@ from app.elastic.utils import (
     close_elastic_connection,
     connect_to_elastic,
 )
-
 from app.pg.database import DataBase
 from app.pg.db_utils import (
     get_database,
@@ -41,6 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Total-Count"],
 )
+app.add_middleware(RawContextMiddleware)
 
 app.add_event_handler("startup", connect_to_elastic)
 app.add_event_handler("shutdown", close_elastic_connection)

@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import (
     ClassVar,
     Dict,
@@ -20,23 +21,35 @@ from app.elastic.fields import (
     FieldType,
 )
 from .base import ResponseModel
-from .elastic import ElasticResource
+from .elastic import (
+    ElasticResource,
+    ElasticResourceAttribute,
+)
 from .util import EmptyStrToNone
 
 _LEARNING_MATERIAL = TypeVar("_LEARNING_MATERIAL")
 
 
-class LearningMaterialAttribute(Field):
+class _LearningMaterialAttribute(Field):
     TITLE = ("properties.cclom:title", FieldType.TEXT)
     KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
     EDUCONTEXT = ("properties.ccm:educationalcontext", FieldType.TEXT)
     SUBJECTS = ("properties.ccm:taxonid", FieldType.TEXT)
-    CONTENT_URL = ("properties.ccm:wwwurl", FieldType.TEXT)
+    WWW_URL = ("properties.ccm:wwwurl", FieldType.TEXT)
     DESCRIPTION = ("properties.cclom:general_description", FieldType.TEXT)
     LICENSES = ("properties.ccm:commonlicense_key", FieldType.TEXT)
     COLLECTION_NODEREF_ID = ("collections.nodeRef.id", FieldType.TEXT)
     COLLECTION_PATH = ("collections.path", FieldType.TEXT)
     CONTENT_FULLTEXT = ("content.fulltext", FieldType.TEXT)
+
+
+LearningMaterialAttribute = Field(
+    "LearningMaterialAttribute",
+    [
+        (f.name, (f.value, f.field_type))
+        for f in chain(ElasticResourceAttribute, _LearningMaterialAttribute)
+    ],
+)
 
 
 class LearningMaterialBase(ElasticResource):
@@ -48,64 +61,48 @@ class LearningMaterialBase(ElasticResource):
     description: Optional[EmptyStrToNone] = None
     licenses: Optional[EmptyStrToNone] = None
 
-    source_fields: ClassVar[list] = ElasticResource.source_fields
-    source_fields.extend(
-        [
-            LearningMaterialAttribute.TITLE,
-            LearningMaterialAttribute.KEYWORDS,
-            LearningMaterialAttribute.EDUCONTEXT,
-            LearningMaterialAttribute.SUBJECTS,
-            LearningMaterialAttribute.CONTENT_URL,
-            LearningMaterialAttribute.DESCRIPTION,
-            LearningMaterialAttribute.LICENSES,
-        ]
-    )
+    source_fields: ClassVar[set] = {
+        LearningMaterialAttribute.NODEREF_ID,
+        LearningMaterialAttribute.TYPE,
+        LearningMaterialAttribute.NAME,
+        LearningMaterialAttribute.TITLE,
+        LearningMaterialAttribute.KEYWORDS,
+        LearningMaterialAttribute.EDUCONTEXT,
+        LearningMaterialAttribute.SUBJECTS,
+        LearningMaterialAttribute.WWW_URL,
+        LearningMaterialAttribute.DESCRIPTION,
+        LearningMaterialAttribute.LICENSES,
+    }
 
     @classmethod
     def parse_elastic_hit_to_dict(cls: Type[_LEARNING_MATERIAL], hit: Dict,) -> dict:
+        spec = {
+            "title": Coalesce(LearningMaterialAttribute.TITLE.path, default=None),
+            "keywords": (
+                Coalesce(LearningMaterialAttribute.KEYWORDS.path, default=[]),
+                Iter().all(),
+            ),
+            "educontext": (
+                Coalesce(LearningMaterialAttribute.EDUCONTEXT.path, default=[]),
+                Iter().all(),
+            ),
+            "subjects": (
+                Coalesce(LearningMaterialAttribute.SUBJECTS.path, default=[]),
+                Iter().all(),
+            ),
+            "www_url": Coalesce(LearningMaterialAttribute.WWW_URL.path, default=None),
+            "description": (
+                Coalesce(LearningMaterialAttribute.DESCRIPTION.path, default=[]),
+                (Iter().all(), "\n".join),
+            ),
+            "licenses": (
+                Coalesce(LearningMaterialAttribute.LICENSES.path, default=[]),
+                (Iter().all(), "\n".join),
+            ),
+        }
         return {
             **super(LearningMaterialBase, cls).parse_elastic_hit_to_dict(hit),
-            "title": glom(
-                hit, Coalesce(LearningMaterialAttribute.TITLE.path, default=None)
-            ),
-            "keywords": glom(
-                hit,
-                (
-                    Coalesce(LearningMaterialAttribute.KEYWORDS.path, default=[]),
-                    Iter().all(),
-                ),
-            ),
-            "educontext": glom(
-                hit,
-                (
-                    Coalesce(LearningMaterialAttribute.EDUCONTEXT.path, default=[]),
-                    Iter().all(),
-                ),
-            ),
-            "subjects": glom(
-                hit,
-                (
-                    Coalesce(LearningMaterialAttribute.SUBJECTS.path, default=[]),
-                    Iter().all(),
-                ),
-            ),
-            "content_url": glom(
-                hit, Coalesce(LearningMaterialAttribute.CONTENT_URL.path, default=None)
-            ),
-            "description": glom(
-                hit,
-                (
-                    Coalesce(LearningMaterialAttribute.DESCRIPTION.path, default=[]),
-                    (Iter().all(), "\n".join),
-                ),
-            ),
-            "licenses": glom(
-                hit,
-                (
-                    Coalesce(LearningMaterialAttribute.LICENSES.path, default=[]),
-                    (Iter().all(), "\n".join),
-                ),
-            ),
+            **glom(hit, spec),
         }
 
 

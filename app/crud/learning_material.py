@@ -1,6 +1,7 @@
 from typing import (
     List,
     Optional,
+    Set,
 )
 from uuid import UUID
 
@@ -19,14 +20,33 @@ from app.elastic import (
     qboolor,
     qwildcard,
 )
+from app.elastic.fields import Field
 from app.models.learning_material import (
     LearningMaterial,
     LearningMaterialAttribute,
 )
 
 
+MissingMaterialField = Field(
+    "MissingMaterialField",
+    [
+        (f.name, (f.value, f.field_type))
+        for f in [
+            LearningMaterialAttribute.NAME,
+            LearningMaterialAttribute.TITLE,
+            LearningMaterialAttribute.KEYWORDS,
+            LearningMaterialAttribute.EDUCONTEXT,
+            LearningMaterialAttribute.SUBJECTS,
+            LearningMaterialAttribute.WWW_URL,
+            LearningMaterialAttribute.DESCRIPTION,
+            LearningMaterialAttribute.LICENSES,
+        ]
+    ],
+)
+
+
 class MissingAttributeFilter(BaseModel):
-    attr: LearningMaterialAttribute
+    attr: MissingMaterialField
 
     def __call__(self, query_dict: dict):
         if self.attr == LearningMaterialAttribute.LICENSES:
@@ -51,6 +71,7 @@ class MissingAttributeFilter(BaseModel):
 async def get_many(
     ancestor_id: Optional[UUID] = None,
     missing_attr_filter: Optional[MissingAttributeFilter] = None,
+    source_fields: Optional[Set[LearningMaterialAttribute]] = None,
     max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
     query_dict = get_many_base_query(
@@ -60,6 +81,10 @@ async def get_many(
         query_dict = missing_attr_filter(query_dict=query_dict)
     s = Search()
     s.query = qbool(**query_dict)
-    response = s.source(LearningMaterial.source_fields)[:max_hits].execute()
+
+    response = s.source(
+        source_fields if source_fields else LearningMaterial.source_fields
+    )[:max_hits].execute()
+
     if response.success():
         return [LearningMaterial.parse_elastic_hit(hit) for hit in response]

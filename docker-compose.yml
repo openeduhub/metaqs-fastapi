@@ -1,6 +1,7 @@
 version: '3.7'
 
 volumes:
+  fastapi-data:
   pg-data:
   elastic-data:
 #  redis-data:
@@ -48,6 +49,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
     networks: [ frontend, backend ]
+    volumes:
+      - fastapi-data:/var/lib/fastapi/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 80 --log-level error
 
 #  redis:

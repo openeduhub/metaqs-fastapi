@@ -1,4 +1,3 @@
-import logging
 from enum import Enum
 from typing import (
     List,
@@ -9,8 +8,13 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.dialects.postgresql import pypostgresql
+from starlette.exceptions import HTTPException
+from starlette.status import HTTP_404_NOT_FOUND
 
-from app.models.collection import Collection
+from app.models.collection import (
+    Collection,
+    PortalTreeNode,
+)
 
 dialect = pypostgresql.dialect(paramstyle="pyformat")
 dialect.implicit_returning = True
@@ -19,6 +23,14 @@ dialect.supports_smallserial = True
 dialect._backslash_escapes = False
 dialect.supports_sane_multi_rowcount = True
 dialect._has_native_hstore = True
+
+
+class CollectionNotFoundException(HTTPException):
+    def __init__(self, noderef_id):
+        super().__init__(
+            status_code=HTTP_404_NOT_FOUND,
+            detail=f"Collection with id '{noderef_id}' not found",
+        )
 
 
 def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:
@@ -34,7 +46,6 @@ def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:
         for key, val in compiled_params
     ]
 
-    logging.debug("Query: %s\nParams: %s", compiled_query, params)
     return compiled_query, params, compiled._result_columns
 
 
@@ -56,22 +67,22 @@ class OrderByParams(BaseModel):
         return query
 
 
-async def build_collection_tree(
+async def build_portal_tree(
     portals: List[Collection], root_noderef_id: UUID
-) -> List[dict]:
-    lut = {root_noderef_id: []}
+) -> List[PortalTreeNode]:
+    lut = {str(root_noderef_id): []}
 
     for portal in portals:
 
-        try:
-            portal_node = {
-                "noderef_id": portal.noderef_id,
-                "title": portal.title,
-                "children": [],
-            }
-            lut[portal.parent_id].append(portal_node)
-            lut[portal.noderef_id] = portal_node["children"]
-        except KeyError:
-            pass
+        portal_node = PortalTreeNode(
+            noderef_id=portal.noderef_id, title=portal.title, children=[],
+        )
 
-    return lut[root_noderef_id]
+        try:
+            lut[str(portal.parent_id)].append(portal_node)
+        except KeyError:
+            lut[str(portal.parent_id)] = [portal_node]
+
+        lut[str(portal.noderef_id)] = portal_node.children
+
+    return lut.get(str(root_noderef_id), [])

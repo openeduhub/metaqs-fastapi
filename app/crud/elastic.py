@@ -34,6 +34,7 @@ def get_many_base_query(
     resource_type: ResourceType, ancestor_id: Optional[UUID] = None,
 ) -> dict:
     query_dict = {"filter": [*base_filter, *type_filter[resource_type]]}
+
     if ancestor_id:
         prefix = "collections." if resource_type == ResourceType.MATERIAL else ""
         query_dict["should"] = [
@@ -41,4 +42,5 @@ def get_many_base_query(
             qmatch(**{f"{prefix}nodeRef.id": ancestor_id}),
         ]
         query_dict["minimum_should_match"] = 1
+
     return query_dict

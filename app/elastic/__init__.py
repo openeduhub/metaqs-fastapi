@@ -7,6 +7,7 @@ from elasticsearch_dsl import *
 from elasticsearch_dsl import Search as ElasticSearch
 from elasticsearch_dsl.aggs import Agg
 from elasticsearch_dsl.query import Query
+from starlette_context import context
 
 from .fields import (
     Field,
@@ -14,7 +15,7 @@ from .fields import (
 )
 
 
-def _extract_terms_key(qfield: Union[Field, str]) -> str:
+def _handle_text_field(qfield: Union[Field, str]) -> str:
     if isinstance(qfield, Field):
         qfield_key = qfield.path
         if qfield.field_type is FieldType.TEXT:
@@ -36,6 +37,18 @@ class Search(ElasticSearch):
             ]
         return super(Search, self).source(source_fields, **kwargs)
 
+    def sort(self, *keys):
+        return super(Search, self).sort(*[_handle_text_field(key) for key in keys])
+
+    def execute(self, ignore_cache=False):
+        response = super(Search, self).execute(ignore_cache=ignore_cache)
+
+        context["elastic_queries"] = context.get("elastic_queries", []) + [
+            {"query": self.to_dict(), "response": response.to_dict()}
+        ]
+
+        return response
+
 
 def qsimplequerystring(query: str, qfields: List[Union[Field, str]], **kwargs) -> Query:
     kwargs["query"] = query
@@ -46,12 +59,12 @@ def qsimplequerystring(query: str, qfields: List[Union[Field, str]], **kwargs) -
 
 
 def qterm(qfield: Union[Field, str], value, **kwargs) -> Query:
-    kwargs[_extract_terms_key(qfield)] = value
+    kwargs[_handle_text_field(qfield)] = value
     return Q("term", **kwargs)
 
 
 def qterms(qfield: Union[Field, str], values: list, **kwargs) -> Query:
-    kwargs[_extract_terms_key(qfield)] = values
+    kwargs[_handle_text_field(qfield)] = values
     return Q("terms", **kwargs)
 
 
@@ -85,7 +98,7 @@ def qboolor(conditions: List[Query]) -> Query:
 
 
 def aterms(qfield: Union[Field, str], **kwargs) -> Agg:
-    kwargs["field"] = _extract_terms_key(qfield)
+    kwargs["field"] = _handle_text_field(qfield)
     return A("terms", **kwargs)
 
 

@@ -1,23 +1,34 @@
 from collections import defaultdict
+from datetime import datetime
+from uuid import UUID
 
+from aiofiles import open
 from elasticsearch_dsl.response import Response
+from fastapi import HTTPException
 from glom import (
     glom,
     merge,
     Iter,
 )
 
-from app.core.config import ELASTIC_MAX_SIZE
+import app.crud.collection as crud_collection
+from app.core.config import (
+    DATA_DIR,
+    ELASTIC_MAX_SIZE,
+)
 from app.core.util import slugify
+from app.crud.util import CollectionNotFoundException
 from app.elastic import (
     Search,
     qbool,
     qsimplequerystring,
+    qterm,
     acomposite,
     aterms,
     script,
 )
 from app.models.learning_material import LearningMaterialAttribute
+from app.models.stats import StatsResponse
 from .elastic import (
     base_filter,
     ResourceType,
@@ -75,6 +86,8 @@ _runtime_mapping_material_type = {
                 } else {
                     emit(doc[params.field].value);
                 }
+            } else {
+                    emit("N/A");
             }
             """,
             params={
@@ -86,14 +99,27 @@ _runtime_mapping_material_type = {
 }
 
 
-async def get_material_types() -> dict:
+def _base_query_material_types(ancestor_id: UUID = None) -> Search:
+    qfilter = [*base_filter, *type_filter[ResourceType.MATERIAL]]
+    if ancestor_id:
+        qfilter.append(
+            qterm(qfield=LearningMaterialAttribute.COLLECTION_PATH, value=ancestor_id)
+        )
+
     s = (
         Search()
-        .query(qbool(filter=[*base_filter, *type_filter[ResourceType.MATERIAL]]))
+        .query(qbool(filter=qfilter))
         .extra(runtime_mappings=_runtime_mapping_material_type)
     )
+
+    return s
+
+
+async def get_material_types() -> dict:
+    s = _base_query_material_types()
     s.aggs.bucket(
-        "material_types", aterms(qfield="material_type", size=ELASTIC_MAX_SIZE)
+        "material_types",
+        aterms(qfield="material_type", missing="N/A", size=ELASTIC_MAX_SIZE),
     )
 
     response: Response = s[:0].execute()
@@ -105,15 +131,15 @@ async def get_material_types() -> dict:
         )
 
 
-async def get_material_type_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
-    s = (
-        Search()
-        .query(qbool(filter=[*type_filter[ResourceType.MATERIAL], *base_filter,]))
-        .extra(runtime_mappings=_runtime_mapping_material_type)
-    )
-    s.aggs.bucket(
-        "material_types", aterms(qfield="material_type", size=ELASTIC_MAX_SIZE)
-    )
+async def material_types_lut() -> dict:
+    mt = await get_material_types()
+    return {v: k for k, v in mt.items()}
+
+
+async def get_material_type_stats(
+    root_noderef_id: UUID, size: int = ELASTIC_MAX_SIZE,
+) -> dict:
+    s = _base_query_material_types(ancestor_id=root_noderef_id)
     s.aggs.bucket(
         "stats",
         acomposite(
@@ -132,9 +158,10 @@ async def get_material_type_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
     response: Response = s[:0].execute()
 
     if response.success():
+        lut = await material_types_lut()
 
         def group_results(carry, stat):
-            material_type = stat["key"]["material_type"]
+            material_type = lut[stat["key"]["material_type"]]
             count = stat["doc_count"]
             record = carry[stat["key"]["noderef_id"]]
             record[material_type] = count
@@ -147,21 +174,62 @@ async def get_material_type_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
         )
 
 
-async def get_search_stats() -> dict:
-    s = Search().query(
-        qsimplequerystring(query="stalin", qfields=[
-            LearningMaterialAttribute.TITLE,
-            LearningMaterialAttribute.KEYWORDS,
-            LearningMaterialAttribute.DESCRIPTION,
-            LearningMaterialAttribute.CONTENT_FULLTEXT,
-        ])
+async def get_search_stats_by_material_type(query_string: str) -> dict:
+    s = _base_query_material_types().query(
+        qsimplequerystring(
+            query=query_string,
+            qfields=[
+                LearningMaterialAttribute.TITLE,
+                LearningMaterialAttribute.KEYWORDS,
+                LearningMaterialAttribute.DESCRIPTION,
+                LearningMaterialAttribute.CONTENT_FULLTEXT,
+            ],
+        )
+    )
+    s.aggs.bucket(
+        "material_types",
+        aterms(qfield="material_type", missing="N/A", size=ELASTIC_MAX_SIZE),
     )
 
     response: Response = s[:0].execute()
 
     if response.success():
-        return {"total": response.hits.total.value}
+        lut = await material_types_lut()
+        stats = {"total": 0}
+        for b in response.aggregations.material_types.buckets:
+            stats[lut[b["key"]]] = b["doc_count"]
+            stats["total"] = stats["total"] + b["doc_count"]
+
+        return stats
 
 
-async def run_search_stats(size: int = ELASTIC_MAX_SIZE) -> dict:
-    return {}
+async def run_stats(noderef_id: UUID):
+    portals = await crud_collection.get_portals_sorted(root_noderef_id=noderef_id)
+    stats_material_types = await get_material_type_stats(root_noderef_id=noderef_id)
+
+    stats = {}
+    for portal in portals:
+        stats[str(portal.noderef_id)] = {
+            "search": await get_search_stats_by_material_type(portal.title),
+            "material_types": stats_material_types.get(str(portal.noderef_id), {}),
+        }
+
+    timestamp = datetime.now()
+
+    try:
+        async with open(DATA_DIR / str(noderef_id), mode="w") as f:
+            await f.write(
+                StatsResponse.parse_obj({"stats": stats, "timestamp": timestamp}).json()
+            )
+    except OSError:
+        raise HTTPException(status_code=500)
+
+
+async def read_stats(noderef_id: UUID) -> StatsResponse:
+    try:
+        async with open(DATA_DIR / str(noderef_id), mode="r") as f:
+            content = await f.read()
+    except FileNotFoundError:
+        raise CollectionNotFoundException(noderef_id)
+
+    return StatsResponse.parse_raw(content)
