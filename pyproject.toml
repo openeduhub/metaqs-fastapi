@@ -20,6 +20,7 @@ aioredis = "^2.0.0"
 python-slugify = "^5.0.2"
 starlette-context = "^0.3.3"
 aiofiles = "^0.7.0"
+radon = "^5.1.0"
 
 [tool.poetry.dev-dependencies]
 
