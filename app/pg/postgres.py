@@ -1,8 +1,8 @@
 from asyncpg.pool import Pool
 
 
-class DataBase:
+class Postgres:
     pool: Pool = None
 
 
-db = DataBase()
+postgres = Postgres()

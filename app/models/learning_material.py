@@ -41,6 +41,10 @@ class _LearningMaterialAttribute(Field):
     COLLECTION_NODEREF_ID = ("collections.nodeRef.id", FieldType.TEXT)
     COLLECTION_PATH = ("collections.path", FieldType.TEXT)
     CONTENT_FULLTEXT = ("content.fulltext", FieldType.TEXT)
+    LEARNINGRESOURCE_TYPE = (
+        "properties.ccm:educationallearningresourcetype",
+        FieldType.TEXT,
+    )
 
 
 LearningMaterialAttribute = Field(

@@ -1,8 +1,11 @@
+import json
 from collections import defaultdict
 from datetime import datetime
+from typing import List
 from uuid import UUID
 
 from aiofiles import open
+from asyncpg import Connection
 from elasticsearch_dsl.response import Response
 from fastapi import HTTPException
 from glom import (
@@ -10,25 +13,31 @@ from glom import (
     merge,
     Iter,
 )
+from sqlalchemy import literal_column, select
 
 import app.crud.collection as crud_collection
 from app.core.config import (
     DATA_DIR,
     ELASTIC_MAX_SIZE,
 )
-from app.core.util import slugify
+
+# from app.core.util import slugify
+from app.crud import compile_query
 from app.crud.util import CollectionNotFoundException
 from app.elastic import (
     Search,
+    acomposite,
+    aterms,
     qbool,
     qsimplequerystring,
     qterm,
-    acomposite,
-    aterms,
     script,
 )
 from app.models.learning_material import LearningMaterialAttribute
 from app.models.stats import StatsResponse
+from app.pg.metadata import Stats
+from app.pg.pg_utils import get_postgres
+from app.pg.queries import stats_latest
 from .elastic import (
     base_filter,
     ResourceType,
@@ -107,19 +116,22 @@ def _base_query_material_types(ancestor_id: UUID = None) -> Search:
         )
 
     s = (
-        Search()
-        .query(qbool(filter=qfilter))
-        .extra(runtime_mappings=_runtime_mapping_material_type)
+        Search().query(qbool(filter=qfilter))
+        # .extra(runtime_mappings=_runtime_mapping_material_type)
     )
 
     return s
 
 
-async def get_material_types() -> dict:
+async def get_material_types() -> List[str]:
     s = _base_query_material_types()
     s.aggs.bucket(
         "material_types",
-        aterms(qfield="material_type", missing="N/A", size=ELASTIC_MAX_SIZE),
+        aterms(
+            qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE,
+            missing="N/A",
+            size=ELASTIC_MAX_SIZE,
+        ),
     )
 
     response: Response = s[:0].execute()
@@ -127,13 +139,14 @@ async def get_material_types() -> dict:
     if response.success():
         return glom(
             response.aggregations.material_types.buckets,
-            (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
+            # (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
+            Iter("key").all(),
         )
 
 
-async def material_types_lut() -> dict:
-    mt = await get_material_types()
-    return {v: k for k, v in mt.items()}
+# async def material_types_lut() -> dict:
+#     mt = await get_material_types()
+#     return {v: k for k, v in mt.items()}
 
 
 async def get_material_type_stats(
@@ -141,10 +154,16 @@ async def get_material_type_stats(
 ) -> dict:
     s = _base_query_material_types(ancestor_id=root_noderef_id)
     s.aggs.bucket(
-        "stats",
+        "material_types",
         acomposite(
             sources=[
-                {"material_type": aterms(qfield="material_type")},
+                # {"material_type": aterms(qfield="material_type")},
+                {
+                    "material_type": aterms(
+                        qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE,
+                        missing_bucket=True,
+                    )
+                },
                 {
                     "noderef_id": aterms(
                         qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
@@ -154,24 +173,52 @@ async def get_material_type_stats(
             size=size,
         ),
     )
+    s.aggs.bucket(
+        "totals",
+        acomposite(
+            sources=[
+                {
+                    "noderef_id": aterms(
+                        qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
+                    )
+                }
+            ],
+            size=size,
+        ),
+    )
 
     response: Response = s[:0].execute()
 
     if response.success():
-        lut = await material_types_lut()
+        # lut = await material_types_lut()
 
-        def group_results(carry, stat):
-            material_type = lut[stat["key"]["material_type"]]
-            count = stat["doc_count"]
-            record = carry[stat["key"]["noderef_id"]]
+        def fold_material_types(carry, bucket):
+            # material_type = lut[stat["key"]["material_type"]]
+            material_type = bucket["key"]["material_type"]
+            if not material_type:
+                material_type = "N/A"
+            count = bucket["doc_count"]
+            record = carry[bucket["key"]["noderef_id"]]
             record[material_type] = count
-            record["total"] = record["total"] + count
 
-        return merge(
-            response.aggregations.stats.buckets,
-            op=group_results,
-            init=lambda: defaultdict(lambda: {"total": 0}),
+        stats = merge(
+            response.aggregations.material_types.buckets,
+            op=fold_material_types,
+            init=lambda: defaultdict(dict),
         )
+
+        def fold_totals(carry, bucket):
+            carry[bucket["key"]["noderef_id"]] = bucket["doc_count"]
+
+        totals = merge(
+            response.aggregations.totals.buckets,
+            op=fold_totals
+        )
+
+        for noderef_id, counts in stats.items():
+            counts["total"] = totals.get(noderef_id)
+
+        return stats
 
 
 async def get_search_stats_by_material_type(query_string: str) -> dict:
@@ -184,20 +231,26 @@ async def get_search_stats_by_material_type(query_string: str) -> dict:
                 LearningMaterialAttribute.DESCRIPTION,
                 LearningMaterialAttribute.CONTENT_FULLTEXT,
             ],
+            default_operator="and"
         )
     )
     s.aggs.bucket(
         "material_types",
-        aterms(qfield="material_type", missing="N/A", size=ELASTIC_MAX_SIZE),
+        aterms(
+            qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE,
+            missing="N/A",
+            size=ELASTIC_MAX_SIZE,
+        ),
     )
 
     response: Response = s[:0].execute()
 
     if response.success():
-        lut = await material_types_lut()
+        # lut = await material_types_lut()
         stats = {"total": 0}
         for b in response.aggregations.material_types.buckets:
-            stats[lut[b["key"]]] = b["doc_count"]
+            # stats[lut[b["key"]]] = b["doc_count"]
+            stats[b["key"]] = b["doc_count"]
             stats["total"] = stats["total"] + b["doc_count"]
 
         return stats
@@ -214,18 +267,39 @@ async def run_stats(noderef_id: UUID):
             "material_types": stats_material_types.get(str(portal.noderef_id), {}),
         }
 
-    timestamp = datetime.now()
+    postgres = await get_postgres()
+    async with postgres.pool.acquire() as conn:
+        query = (
+            Stats.insert()
+            .values(noderef_id=noderef_id, stats=stats, derived_at=datetime.now())
+            .returning(literal_column("*"))
+        )
+        compiled_query, params, _ = compile_query(query)
+        row = await conn.fetchrow(compiled_query, *params)
 
     try:
-        async with open(DATA_DIR / str(noderef_id), mode="w") as f:
+        async with open(DATA_DIR / str(row["noderef_id"]), mode="w") as f:
             await f.write(
-                StatsResponse.parse_obj({"stats": stats, "timestamp": timestamp}).json()
+                StatsResponse(
+                    derived_at=row["derived_at"], stats=json.loads(row["stats"])
+                ).json()
             )
     except OSError:
         raise HTTPException(status_code=500)
 
 
-async def read_stats(noderef_id: UUID) -> StatsResponse:
+async def read_stats(
+    conn: Connection, noderef_id: UUID, at: datetime = None
+) -> StatsResponse:
+    query = stats_latest(noderef_id, at=at)
+    compiled_query, params, _ = compile_query(query)
+    row = await conn.fetchrow(compiled_query, *params)
+
+    if row:
+        return StatsResponse(
+            derived_at=row["derived_at"], stats=json.loads(row["stats"])
+        )
+
     try:
         async with open(DATA_DIR / str(noderef_id), mode="r") as f:
             content = await f.read()
@@ -233,3 +307,18 @@ async def read_stats(noderef_id: UUID) -> StatsResponse:
         raise CollectionNotFoundException(noderef_id)
 
     return StatsResponse.parse_raw(content)
+
+
+async def read_stats_timeline(conn: Connection, noderef_id: UUID) -> List[datetime]:
+    query = (
+        select(Stats.c.derived_at)
+        .where(Stats.c.noderef_id == noderef_id)
+        .order_by(Stats.c.derived_at.desc())
+    )
+    compiled_query, params, _ = compile_query(query)
+    rows = await conn.fetch(compiled_query, *params)
+
+    if rows:
+        return [row["derived_at"] for row in rows]
+
+    raise CollectionNotFoundException(noderef_id)

@@ -5,17 +5,17 @@ from app.core.config import (
     MAX_CONNECTIONS_COUNT,
     MIN_CONNECTIONS_COUNT,
 )
-from .database import db
+from .postgres import postgres
 
 
-async def get_database():
-    if not db.pool:
+async def get_postgres():
+    if not postgres.pool:
         await connect_to_postgres()
-    return db
+    return postgres
 
 
 async def connect_to_postgres():
-    db.pool = await asyncpg.create_pool(
+    postgres.pool = await asyncpg.create_pool(
         str(DATABASE_URL),
         min_size=MIN_CONNECTIONS_COUNT,
         max_size=MAX_CONNECTIONS_COUNT,
@@ -23,5 +23,5 @@ async def connect_to_postgres():
 
 
 async def close_postgres_connection():
-    if db.pool:
-        await db.pool.close()
+    if postgres.pool:
+        await postgres.pool.close()

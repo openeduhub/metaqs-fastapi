@@ -7,7 +7,8 @@ from .learning_material import (
     MissingAttributeFilter as MissingMaterialAttributeFilter,
 )
 
-# from .util import (
-#     OrderByDirection,
-#     OrderByParams,
-# )
+from .util import (
+    compile_query,
+    OrderByDirection,
+    OrderByParams,
+)

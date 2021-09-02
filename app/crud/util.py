@@ -73,7 +73,6 @@ async def build_portal_tree(
     lut = {str(root_noderef_id): []}
 
     for portal in portals:
-
         portal_node = PortalTreeNode(
             noderef_id=portal.noderef_id, title=portal.title, children=[],
         )

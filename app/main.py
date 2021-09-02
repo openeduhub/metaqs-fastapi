@@ -24,11 +24,11 @@ from app.elastic.utils import (
     close_elastic_connection,
     connect_to_elastic,
 )
-from app.pg.database import DataBase
-from app.pg.db_utils import (
-    get_database,
+from app.pg.pg_utils import (
+    get_postgres,
     close_postgres_connection,
 )
+from app.pg.postgres import Postgres
 
 app = FastAPI(title=PROJECT_NAME, debug=DEBUG)
 
@@ -71,8 +71,8 @@ async def ping():
 @app.get(
     "/pg-version", tags=["healthcheck"], response_model=dict,
 )
-async def pg_version(db: DataBase = Depends(get_database),):
-    async with db.pool.acquire() as conn:
+async def pg_version(postgres: Postgres = Depends(get_postgres),):
+    async with postgres.pool.acquire() as conn:
         version = await conn.fetchval("select version()")
         return {"version": version}
 

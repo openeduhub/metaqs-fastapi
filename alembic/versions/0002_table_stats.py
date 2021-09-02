@@ -21,12 +21,14 @@ def upgrade():
 create table stats
 (
     id         serial primary key,
+    noderef_id uuid      not null,
     stats      jsonb     not null,
     derived_at timestamp not null,
     created_at timestamp not null default now()
 );
 
-create index idx_stats_derived_at on stats (derived_at);
+create index idx_stats_noderef_id_derived_at
+    on stats (noderef_id, derived_at);
 """)
 
 

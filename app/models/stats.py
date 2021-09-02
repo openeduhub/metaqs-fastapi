@@ -1,16 +1,9 @@
 from datetime import datetime
 from typing import Dict
 
-from .base import (
-    BaseModel,
-    ResponseModel,
-)
-
-
-class MaterialStats(BaseModel):
-    __root__: Dict[str, int]
+from .base import ResponseModel
 
 
 class StatsResponse(ResponseModel):
-    timestamp: datetime
-    stats: Dict[str, Dict[str, MaterialStats]]
+    derived_at: datetime
+    stats: Dict[str, Dict[str, Dict[str, int]]]

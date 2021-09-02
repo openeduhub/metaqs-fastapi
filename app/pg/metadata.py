@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import (
     JSONB,
     SMALLINT,
     TIMESTAMP,
+    UUID,
 )
 
 metadata = MetaData()
@@ -25,8 +26,8 @@ Stats = Table(
     "stats",
     metadata,
     Column("id", Integer, primary_key=True),
+    Column("noderef_id", UUID),
     Column("stats", JSONB),
     Column("derived_at", TIMESTAMP),
     Column("created_at", TIMESTAMP),
-    Column("updated_at", TIMESTAMP),
 )

@@ -8,22 +8,21 @@ from uuid import UUID
 
 from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
-from starlette_context import context
 
 from app.core.config import (
     PORTAL_ROOT_ID,
     ELASTIC_MAX_SIZE,
 )
 from app.elastic import (
+    Field,
     Search,
+    abucketsort,
+    acomposite,
+    aterms,
     qbool,
     qterm,
     qwildcard,
-    acomposite,
-    abucketsort,
-    aterms,
 )
-from app.elastic.fields import Field
 from app.models.elastic import (
     DescendantCollectionsMaterialsCounts,
     ElasticResourceAttribute,
@@ -37,9 +36,9 @@ from app.models.learning_material import (
     LearningMaterialAttribute,
 )
 from .elastic import (
+    ResourceType,
     base_filter,
     get_many_base_query,
-    ResourceType,
     type_filter,
 )
 from .learning_material import (
@@ -114,7 +113,7 @@ async def get_many(
         resource_type=ResourceType.COLLECTION, ancestor_id=ancestor_id,
     )
     if missing_attr_filter:
-        query_dict = missing_attr_filter(query_dict=query_dict)
+        query_dict = missing_attr_filter.__call__(query_dict=query_dict)
     s = Search().query(qbool(**query_dict))
 
     response = s.source(source_fields if source_fields else Collection.source_fields)[

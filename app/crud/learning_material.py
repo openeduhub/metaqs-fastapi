@@ -9,18 +9,18 @@ from pydantic import BaseModel
 
 from app.core.config import ELASTIC_MAX_SIZE
 from app.crud.elastic import (
-    get_many_base_query,
     ResourceType,
+    get_many_base_query,
 )
 from app.elastic import (
+    Field,
     Search,
-    qterms,
     qbool,
-    qnotexists,
     qboolor,
+    qnotexists,
+    qterms,
     qwildcard,
 )
-from app.elastic.fields import Field
 from app.models.learning_material import (
     LearningMaterial,
     LearningMaterialAttribute,
@@ -78,7 +78,7 @@ async def get_many(
         resource_type=ResourceType.MATERIAL, ancestor_id=ancestor_id,
     )
     if missing_attr_filter:
-        query_dict = missing_attr_filter(query_dict=query_dict)
+        query_dict = missing_attr_filter.__call__(query_dict=query_dict)
     s = Search()
     s.query = qbool(**query_dict)
 

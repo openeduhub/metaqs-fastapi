@@ -106,7 +106,6 @@ class CollectionMaterialsCount(PydanticBaseModel):
 
 
 class DescendantCollectionsMaterialsCounts(BucketAgg):
-
     results: List[CollectionMaterialsCount]
 
     @classmethod
