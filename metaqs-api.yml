@@ -1,20 +1,41 @@
 version: '3.7'
 
+volumes:
+  pg-data:
+
 networks:
+  backend:
   traefik-public:
     external: true
 
 services:
 
+  postgres:
+    container_name: postgres
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=oeh
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    restart: unless-stopped
+    networks: [ backend ]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
   fastapi:
     container_name: fastapi
     image: community.docker.edu-sharing.com/metaqs-api-fastpi:latest
+    depends_on: [ postgres ]
     environment:
       - API_KEY=${API_KEY}
       - PROJECT_NAME="MetaQS API"
       - API_VERSION=v1
       - LOG_LEVEL=error
       - ALLOWED_HOSTS=*
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=oeh
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
       - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:80/_ping" ]
@@ -25,6 +46,7 @@ services:
     ports:
       - "${PORT}:80"
     networks:
+      - backend
       - traefik-public
     deploy:
       labels:
