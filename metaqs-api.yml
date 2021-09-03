@@ -25,7 +25,7 @@ services:
 
   fastapi:
     container_name: fastapi
-    image: community.docker.edu-sharing.com/metaqs-api-fastpi:latest
+    image: community.docker.edu-sharing.com/metaqs-api-fastapi:latest
     depends_on: [ postgres ]
     environment:
       - API_KEY=${API_KEY}
