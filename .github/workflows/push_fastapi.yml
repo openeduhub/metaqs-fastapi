@@ -23,4 +23,4 @@ jobs:
         run: docker build -t community.docker.edu-sharing.com/metaqs-api-fastapi:latest .
 
       - name: Push the Docker image
-        run: docker push community.docker.edu-sharing.com/metaqs-api-fastpi:latest
+        run: docker push community.docker.edu-sharing.com/metaqs-api-fastapi:latest
