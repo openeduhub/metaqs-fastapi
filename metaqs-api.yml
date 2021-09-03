@@ -1,6 +1,7 @@
 version: '3.7'
 
 volumes:
+  fastapi-data:
   pg-data:
 
 networks:
@@ -57,4 +58,6 @@ services:
         - traefik.docker.network=traefik-public
         - traefik.frontend.entryPoints=http,https
         - traefik.frontend.redirect.entryPoint=https
+    volumes:
+      - fastapi-data:/var/lib/fastapi/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 80 --log-level error
