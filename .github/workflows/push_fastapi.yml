@@ -20,7 +20,7 @@ jobs:
         run: docker login community.docker.edu-sharing.com -u ${{ secrets.DOCKER_EDU_HUB_REGISTRY_USERNAME }} -p ${{ secrets.DOCKER_EDU_HUB_REGISTRY_PASSWORD }}
 
       - name: Build the container
-        run: docker build -t community.docker.edu-sharing.com/metaqs-api--fastapi:latest .
+        run: docker build -t community.docker.edu-sharing.com/metaqs-api-fastapi:latest .
 
       - name: Push the Docker image
-        run: docker push community.docker.edu-sharing.com/metaqs-api--fastpi:latest
+        run: docker push community.docker.edu-sharing.com/metaqs-api-fastpi:latest
