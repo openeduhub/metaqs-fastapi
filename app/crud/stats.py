@@ -1,11 +1,16 @@
+import asyncio
 import json
 from collections import defaultdict
 from datetime import datetime
-from typing import List
+from typing import List, Union
 from uuid import UUID
 
 from aiofiles import open
-from asyncpg import Connection
+from aiofiles.os import mkdir
+from asyncpg import (
+    Connection,
+    Record,
+)
 from elasticsearch_dsl.response import Response
 from fastapi import HTTPException
 from glom import (
@@ -13,130 +18,47 @@ from glom import (
     merge,
     Iter,
 )
-from sqlalchemy import literal_column, select
 
 import app.crud.collection as crud_collection
-from app.core.config import (
-    DATA_DIR,
-    ELASTIC_MAX_SIZE,
-)
+from app.core.config import DATA_DIR
 
 # from app.core.util import slugify
-from app.crud import compile_query
-from app.crud.util import CollectionNotFoundException
-from app.elastic import (
-    Search,
-    acomposite,
-    aterms,
-    qbool,
-    qsimplequerystring,
-    qterm,
-    script,
+from app.crud.util import StatsNotFoundException
+from app.elastic import Search
+from app.elastic.utils import (
+    merge_agg_response,
+    merge_composite_agg_response,
 )
-from app.models.learning_material import LearningMaterialAttribute
-from app.models.stats import StatsResponse
-from app.pg.metadata import Stats
+from app.models.stats import StatType
 from app.pg.pg_utils import get_postgres
-from app.pg.queries import stats_latest
+from app.pg.queries import (
+    stats_insert,
+    stats_latest,
+    stats_timeline,
+)
 from .elastic import (
-    base_filter,
-    ResourceType,
-    type_filter,
+    agg_collection_validation,
+    agg_materials_by_collection,
+    agg_material_types,
+    agg_material_types_by_collection,
+    agg_material_validation,
+    parse_agg_collection_validation_response,
+    parse_agg_material_validation_response,
+    query_collections,
+    query_materials,
+    runtime_mappings_collection_validation,
+    search_materials,
 )
 
-_MATERIAL_TYPES_MAP_EN_DE = {
-    "other web resource": "Andere Web Ressource",
-    "other asset type": "Anderer Ressourcentyp",
-    "other": "Anderes Material",
-    "application": "Anwendung/Software",
-    "worksheet": "Arbeitsblatt",
-    "audio": "Audio",
-    "audiovisual medium": "Audiovisuelles Medium",
-    "image": "Bild",
-    "data": "Daten",
-    "exploration": "Entdeckendes Lernen",
-    "experiment": "Experiment",
-    "case_study": "Fallstudie",
-    "glossary": "Glossar",
-    "guide": "Handbuch",
-    "map": "Karte",
-    "course": "Kurs",
-    "assessment": "Lernkontrolle",
-    "educational Game": "Lernspiel",
-    "model": "Modell",
-    "open activity": "Offene Aktivität",
-    "presentation": "Präsentation",
-    "reference": "Primärmaterial/Quelle",
-    "project": "Projekt",
-    "broadcast": "Radio/TV",
-    "enquiry-oriented activity": "Recherche-Auftrag",
-    "role play": "Rollenspiel",
-    "simulation": "Simulation",
-    "text": "Text",
-    "drill and practice": "Übung",
-    "teaching module": "Unterrichtsbaustein",
-    "lesson plan": "Unterrichtsplanung",
-    "demonstration": "Veranschaulichung",
-    "video": "Video",
-    "weblog": "Weblog",
-    "web page": "Website",
-    "tool": "Werkzeug",
-    "wiki": "Wiki",
-}
 
-_runtime_mapping_material_type = {
-    "material_type": {
-        "type": "keyword",
-        "script": script(
-            """
-            if (doc.containsKey(params.field) && !doc[params.field].empty) {
-                if (params.map.containsKey(doc[params.field].value)) {
-                    emit(params.map.get(doc[params.field].value));
-                } else {
-                    emit(doc[params.field].value);
-                }
-            } else {
-                    emit("N/A");
-            }
-            """,
-            params={
-                "field": "i18n.de_DE.ccm:educationallearningresourcetype.keyword",
-                "map": _MATERIAL_TYPES_MAP_EN_DE,
-            },
-        ),
-    }
-}
-
-
-def _base_query_material_types(ancestor_id: UUID = None) -> Search:
-    qfilter = [*base_filter, *type_filter[ResourceType.MATERIAL]]
-    if ancestor_id:
-        qfilter.append(
-            qterm(qfield=LearningMaterialAttribute.COLLECTION_PATH, value=ancestor_id)
-        )
-
-    s = (
-        Search().query(qbool(filter=qfilter))
-        # .extra(runtime_mappings=_runtime_mapping_material_type)
-    )
-
-    return s
-
-
-async def get_material_types() -> List[str]:
-    s = _base_query_material_types()
-    s.aggs.bucket(
-        "material_types",
-        aterms(
-            qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE,
-            missing="N/A",
-            size=ELASTIC_MAX_SIZE,
-        ),
-    )
+async def material_types() -> List[str]:
+    s = Search().query(query_materials())
+    s.aggs.bucket("material_types", agg_material_types())
 
     response: Response = s[:0].execute()
 
     if response.success():
+        # TODO: refactor algorithm
         return glom(
             response.aggregations.material_types.buckets,
             # (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
@@ -149,43 +71,10 @@ async def get_material_types() -> List[str]:
 #     return {v: k for k, v in mt.items()}
 
 
-async def get_material_type_stats(
-    root_noderef_id: UUID, size: int = ELASTIC_MAX_SIZE,
-) -> dict:
-    s = _base_query_material_types(ancestor_id=root_noderef_id)
-    s.aggs.bucket(
-        "material_types",
-        acomposite(
-            sources=[
-                # {"material_type": aterms(qfield="material_type")},
-                {
-                    "material_type": aterms(
-                        qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE,
-                        missing_bucket=True,
-                    )
-                },
-                {
-                    "noderef_id": aterms(
-                        qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
-                    )
-                },
-            ],
-            size=size,
-        ),
-    )
-    s.aggs.bucket(
-        "totals",
-        acomposite(
-            sources=[
-                {
-                    "noderef_id": aterms(
-                        qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
-                    )
-                }
-            ],
-            size=size,
-        ),
-    )
+async def material_counts_by_type(root_noderef_id: UUID) -> dict:
+    s = Search().query(query_materials(ancestor_id=root_noderef_id))
+    s.aggs.bucket("material_types", agg_material_types_by_collection())
+    s.aggs.bucket("totals", agg_materials_by_collection())
 
     response: Response = s[:0].execute()
 
@@ -201,18 +90,15 @@ async def get_material_type_stats(
             record = carry[bucket["key"]["noderef_id"]]
             record[material_type] = count
 
+        # TODO: refactor algorithm
         stats = merge(
             response.aggregations.material_types.buckets,
             op=fold_material_types,
             init=lambda: defaultdict(dict),
         )
 
-        def fold_totals(carry, bucket):
-            carry[bucket["key"]["noderef_id"]] = bucket["doc_count"]
-
-        totals = merge(
-            response.aggregations.totals.buckets,
-            op=fold_totals
+        totals = merge_composite_agg_response(
+            response.aggregations.totals, key="noderef_id"
         )
 
         for noderef_id, counts in stats.items():
@@ -221,104 +107,147 @@ async def get_material_type_stats(
         return stats
 
 
-async def get_search_stats_by_material_type(query_string: str) -> dict:
-    s = _base_query_material_types().query(
-        qsimplequerystring(
-            query=query_string,
-            qfields=[
-                LearningMaterialAttribute.TITLE,
-                LearningMaterialAttribute.KEYWORDS,
-                LearningMaterialAttribute.DESCRIPTION,
-                LearningMaterialAttribute.CONTENT_FULLTEXT,
-            ],
-            default_operator="and"
-        )
-    )
-    s.aggs.bucket(
-        "material_types",
-        aterms(
-            qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE,
-            missing="N/A",
-            size=ELASTIC_MAX_SIZE,
-        ),
-    )
+async def search_hits_by_material_type(query_string: str) -> dict:
+    s = Search().query(query_materials()).query(search_materials(query_string))
+    s.aggs.bucket("material_types", agg_material_types())
 
     response: Response = s[:0].execute()
 
     if response.success():
         # lut = await material_types_lut()
-        stats = {"total": 0}
-        for b in response.aggregations.material_types.buckets:
-            # stats[lut[b["key"]]] = b["doc_count"]
-            stats[b["key"]] = b["doc_count"]
-            stats["total"] = stats["total"] + b["doc_count"]
-
+        stats = merge_agg_response(response.aggregations.material_types)
+        stats["total"] = sum(stats.values())
         return stats
 
 
-async def run_stats(noderef_id: UUID):
-    portals = await crud_collection.get_portals_sorted(root_noderef_id=noderef_id)
-    stats_material_types = await get_material_type_stats(root_noderef_id=noderef_id)
+async def run_stats_material_types(root_noderef_id: UUID) -> dict:
+    portals = await crud_collection.get_many_sorted(root_noderef_id=root_noderef_id)
+    material_counts = await material_counts_by_type(root_noderef_id=root_noderef_id)
 
+    # TODO: refactor algorithm
     stats = {}
     for portal in portals:
         stats[str(portal.noderef_id)] = {
-            "search": await get_search_stats_by_material_type(portal.title),
-            "material_types": stats_material_types.get(str(portal.noderef_id), {}),
+            "search": await search_hits_by_material_type(portal.title),
+            "material_types": material_counts.get(str(portal.noderef_id), {}),
         }
 
-    postgres = await get_postgres()
-    async with postgres.pool.acquire() as conn:
-        query = (
-            Stats.insert()
-            .values(noderef_id=noderef_id, stats=stats, derived_at=datetime.now())
-            .returning(literal_column("*"))
+    return stats
+
+
+async def run_stats_validation_collections(root_noderef_id: UUID) -> List[dict]:
+    s = (
+        Search()
+        .query(query_collections(ancestor_id=root_noderef_id))
+        .extra(runtime_mappings=runtime_mappings_collection_validation)
+    )
+    s.aggs.bucket("grouped_by_collection", agg_collection_validation())
+
+    response: Response = s[:0].execute()
+
+    if response.success():
+        return parse_agg_collection_validation_response(
+            response.aggregations.grouped_by_collection
         )
-        compiled_query, params, _ = compile_query(query)
-        row = await conn.fetchrow(compiled_query, *params)
+
+
+async def run_stats_validation_materials(root_noderef_id: UUID) -> List[dict]:
+    s = Search().query(query_materials(ancestor_id=root_noderef_id))
+    s.aggs.bucket("grouped_by_collection", agg_material_validation())
+
+    response: Response = s[:0].execute()
+
+    if response.success():
+        return parse_agg_material_validation_response(
+            response.aggregations.grouped_by_collection
+        )
+
+
+async def run_stats(noderef_id: UUID):
+    material_types_stats = await run_stats_material_types(root_noderef_id=noderef_id)
+
+    validation_collections_stats = await run_stats_validation_collections(
+        root_noderef_id=noderef_id
+    )
+    # if not validation_collections_stats:
+    #     validation_collections_stats = [{}]
+
+    validation_materials_stats = await run_stats_validation_materials(
+        root_noderef_id=noderef_id
+    )
+    # if not validation_materials_stats:
+    #     validation_materials_stats = [{}]
+
+    derived_at = datetime.now()
+
+    async def store_stats(t):
+        postgres = await get_postgres()
+
+        stat_type, stats = t
+
+        async with postgres.pool.acquire() as conn:
+            row = await stats_insert(
+                conn,
+                noderef_id=noderef_id,
+                stat_type=stat_type,
+                stats=stats,
+                derived_at=derived_at,
+            )
+
+        await write_stats_file(row, stat_type=stat_type)
+
+    # TODO: encapsulate in transaction
+    await store_stats((StatType.MATERIAL_TYPES, material_types_stats))
+    await store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats))
+    await store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats))
+
+    # results = await asyncio.gather([
+    #     store_stats((StatType.MATERIAL_TYPES, material_types_stats)),
+    #     store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats[0])),
+    #     store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats[0])),
+    # ])
+
+
+async def read_stats(
+    conn: Connection, stat_type: StatType, noderef_id: UUID, at: datetime = None
+) -> Union[dict, None]:
+    row = await stats_latest(conn, stat_type, noderef_id, at=at)
+
+    if row:
+        return dict(row)
+
+
+async def read_stats_timeline(conn: Connection, noderef_id: UUID) -> List[datetime]:
+    rows = await stats_timeline(conn, noderef_id=noderef_id)
+
+    if rows:
+        return [row["derived_at"] for row in rows]
+
+
+async def write_stats_file(row: Record, stat_type: StatType):
+    try:
+        await mkdir(DATA_DIR / stat_type.value)
+    except FileExistsError:
+        ...
 
     try:
-        async with open(DATA_DIR / str(row["noderef_id"]), mode="w") as f:
+        async with open(
+            (DATA_DIR / stat_type.value) / str(row["noderef_id"]), mode="w"
+        ) as f:
             await f.write(
-                StatsResponse(
-                    derived_at=row["derived_at"], stats=json.loads(row["stats"])
-                ).json()
+                json.dumps(
+                    {"derived_at": row["derived_at"].isoformat(), "stats": row["stats"]}
+                )
             )
     except OSError:
         raise HTTPException(status_code=500)
 
 
-async def read_stats(
-    conn: Connection, noderef_id: UUID, at: datetime = None
-) -> StatsResponse:
-    query = stats_latest(noderef_id, at=at)
-    compiled_query, params, _ = compile_query(query)
-    row = await conn.fetchrow(compiled_query, *params)
-
-    if row:
-        return StatsResponse(
-            derived_at=row["derived_at"], stats=json.loads(row["stats"])
-        )
-
+async def read_stats_file(noderef_id: UUID, stat_type: StatType) -> Union[dict, None]:
     try:
-        async with open(DATA_DIR / str(noderef_id), mode="r") as f:
+        async with open(DATA_DIR / stat_type.value / str(noderef_id), mode="r") as f:
             content = await f.read()
     except FileNotFoundError:
-        raise CollectionNotFoundException(noderef_id)
+        return None
 
-    return StatsResponse.parse_raw(content)
-
-
-async def read_stats_timeline(conn: Connection, noderef_id: UUID) -> List[datetime]:
-    query = (
-        select(Stats.c.derived_at)
-        .where(Stats.c.noderef_id == noderef_id)
-        .order_by(Stats.c.derived_at.desc())
-    )
-    compiled_query, params, _ = compile_query(query)
-    rows = await conn.fetch(compiled_query, *params)
-
-    if rows:
-        return [row["derived_at"] for row in rows]
-
-    raise CollectionNotFoundException(noderef_id)
+    return json.loads(content)

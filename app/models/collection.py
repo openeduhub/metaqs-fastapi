@@ -35,7 +35,6 @@ _COLLECTION = TypeVar("_COLLECTION")
 
 class _CollectionAttribute(Field):
     TITLE = ("properties.cm:title", FieldType.TEXT)
-    KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
     DESCRIPTION = ("properties.cm:description", FieldType.TEXT)
     PATH = ("path", FieldType.KEYWORD)
     PARENT_ID = ("parentRef.id", FieldType.KEYWORD)
@@ -102,6 +101,14 @@ class Collection(ResponseModel, CollectionBase):
     pass
 
 
+# TODO: move to api package
+class CollectionMaterialsCount(ResponseModel):
+    noderef_id: UUID
+    title: str
+    materials_count: int
+
+
+# TODO: move to api package
 class PortalTreeNode(BaseModel):
     noderef_id: UUID
     title: str

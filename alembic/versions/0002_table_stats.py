@@ -1,4 +1,4 @@
-"""inspection templates
+"""table_stats
 
 Revision ID: 0002
 Revises: 
@@ -18,10 +18,19 @@ depends_on = None
 def upgrade():
     conn = op.get_bind()
     conn.execute("""
+create type stat_type as enum
+(
+    'search',
+    'material-types',
+    'validation-collections',
+    'validation-materials'
+);
+
 create table stats
 (
     id         serial primary key,
     noderef_id uuid      not null,
+    stat_type  stat_type not null,
     stats      jsonb     not null,
     derived_at timestamp not null,
     created_at timestamp not null default now()
@@ -36,4 +45,5 @@ def downgrade():
     conn = op.get_bind()
     conn.execute("""
 drop table stats;
+drop type stat_type;
 """)

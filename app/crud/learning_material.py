@@ -11,14 +11,12 @@ from app.core.config import ELASTIC_MAX_SIZE
 from app.crud.elastic import (
     ResourceType,
     get_many_base_query,
+    query_missing_material_license,
 )
 from app.elastic import (
     Field,
     Search,
     qbool,
-    qboolor,
-    qnotexists,
-    qterms,
     qwildcard,
 )
 from app.models.learning_material import (
@@ -50,21 +48,10 @@ class MissingAttributeFilter(BaseModel):
 
     def __call__(self, query_dict: dict):
         if self.attr == LearningMaterialAttribute.LICENSES:
-            query_dict["filter"].extend(
-                [
-                    qboolor(
-                        [
-                            qterms(
-                                qfield=self.attr,
-                                values=["UNTERRICHTS_UND_LEHRMEDIEN", "NONE", ""],
-                            ),
-                            qnotexists(qfield=self.attr.path),
-                        ]
-                    )
-                ]
-            )
+            query_dict["filter"].append(query_missing_material_license())
         else:
             query_dict["must_not"] = qwildcard(qfield=self.attr, value="*")
+
         return query_dict
 
 
@@ -79,8 +66,7 @@ async def get_many(
     )
     if missing_attr_filter:
         query_dict = missing_attr_filter.__call__(query_dict=query_dict)
-    s = Search()
-    s.query = qbool(**query_dict)
+    s = Search().query(qbool(**query_dict))
 
     response = s.source(
         source_fields if source_fields else LearningMaterial.source_fields

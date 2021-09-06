@@ -1,6 +1,8 @@
 from .dsl import (
     abucketsort,
     acomposite,
+    afilter,
+    amissing,
     aterms,
     qbool,
     qboolor,

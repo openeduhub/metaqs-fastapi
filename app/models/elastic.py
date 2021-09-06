@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import (
     ClassVar,
     Dict,
@@ -27,8 +26,6 @@ from .base import BaseModel
 from .util import EmptyStrToNone
 
 _ELASTIC_RESOURCE = TypeVar("_ELASTIC_RESOURCE")
-_ELASTIC_AGG = TypeVar("_ELASTIC_AGG")
-_BUCKET_AGG = TypeVar("_BUCKET_AGG")
 _DESCENDANT_COLLECTIONS_MATERIALS_COUNTS = TypeVar(
     "_DESCENDANT_COLLECTIONS_MATERIALS_COUNTS"
 )
@@ -42,6 +39,9 @@ class ElasticResourceAttribute(Field):
     EDU_METADATASET = ("properties.cm:edu_metadataset", FieldType.TEXT)
     PROTOCOL = ("nodeRef.storeRef.protocol", FieldType.KEYWORD)
     FULLPATH = ("fullpath", FieldType.KEYWORD)
+    KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
+    EDUCONTEXT = ("properties.ccm:educationalcontext", FieldType.TEXT)
+    EDUCONTEXT_DE = ("i18n.de_DE.ccm:educationalcontext", FieldType.TEXT)
 
 
 class ElasticConfig:
@@ -79,34 +79,20 @@ class ElasticResource(BaseModel):
         return cls.construct(**cls.parse_elastic_hit_to_dict(hit))
 
 
-class ElasticAggConfig:
-    arbitrary_types_allowed = True
-    allow_population_by_field_name = True
-    extra = Extra.forbid
-
-
-class ElasticAgg(BaseModel, ABC):
-    class Config(ElasticAggConfig):
-        pass
-
-    @classmethod
-    def parse_elastic_response(
-        cls: Type[_ELASTIC_AGG], response: Response,
-    ) -> _ELASTIC_AGG:
-        raise NotImplementedError()
-
-
-class BucketAgg(ElasticAgg, ABC):
-    pass
-
-
+# TODO: eliminate
 class CollectionMaterialsCount(PydanticBaseModel):
     noderef_id: UUID
     materials_count: int
 
 
-class DescendantCollectionsMaterialsCounts(BucketAgg):
+# TODO: eliminate
+class DescendantCollectionsMaterialsCounts(PydanticBaseModel):
     results: List[CollectionMaterialsCount]
+
+    class Config:
+        arbitrary_types_allowed = True
+        allow_population_by_field_name = True
+        extra = Extra.forbid
 
     @classmethod
     def parse_elastic_response(
@@ -116,7 +102,7 @@ class DescendantCollectionsMaterialsCounts(BucketAgg):
             response,
             (
                 "aggregations.grouped_by_collection.buckets",
-                [{"noderef_id": "key.noderef_id", "materials_count": "doc_count",}],
+                [{"noderef_id": "key.noderef_id", "materials_count": "doc_count"}],
             ),
         )
         return cls.construct(
