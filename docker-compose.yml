@@ -113,6 +113,16 @@ services:
       - elasticsearch
     networks: [ frontend, backend ]
 
+#  superset:
+#    container_name: superset
+#    build:
+#      context: ./
+#      dockerfile: Dockerfile.apache-superset
+#    image: edu-sharing/superset
+#    depends_on:
+#      - elasticsearch
+#    networks: [ frontend, backend ]
+
 #  importer:
 #    container_name: importer
 #    image: elasticdump/elasticsearch-dump

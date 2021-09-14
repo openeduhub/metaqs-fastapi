@@ -1,16 +1,12 @@
 from sqlalchemy import (
     Column,
-    ForeignKey,
     Integer,
     MetaData,
-    PrimaryKeyConstraint,
-    String,
     Table,
 )
 from sqlalchemy.dialects.postgresql import (
-    ARRAY,
+    ENUM,
     JSONB,
-    SMALLINT,
     TIMESTAMP,
     UUID,
 )
@@ -27,6 +23,7 @@ Stats = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("noderef_id", UUID),
+    Column("stat_type", ENUM),
     Column("stats", JSONB),
     Column("derived_at", TIMESTAMP),
     Column("created_at", TIMESTAMP),

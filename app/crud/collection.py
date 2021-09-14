@@ -17,10 +17,7 @@ from app.elastic import (
     Field,
     Search,
     abucketsort,
-    acomposite,
-    aterms,
     qbool,
-    qterm,
     qwildcard,
 )
 from app.models.elastic import (
@@ -37,9 +34,10 @@ from app.models.learning_material import (
 )
 from .elastic import (
     ResourceType,
-    base_filter,
+    agg_materials_by_collection,
     get_many_base_query,
-    type_filter,
+    query_materials,
+    query_collections,
 )
 from .learning_material import (
     get_many as get_many_materials,
@@ -47,7 +45,6 @@ from .learning_material import (
 )
 
 PORTALS = {
-    "Alle Fachportale": {"value": PORTAL_ROOT_ID},
     "Physik": {"value": "93f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"},
     "Mathematik": {"value": "bd8be6d5-0fbe-4534-a4b3-773154ba6abc"},
     "Biologie": {"value": "15fce411-54d9-467f-8f35-61ea374a298d"},
@@ -99,6 +96,10 @@ class MissingAttributeFilter(BaseModel):
         return query_dict
 
 
+async def get_portals() -> Dict[UUID, str]:
+    return {v["value"]: k for k, v in PORTALS.items()}
+
+
 async def get_single(noderef_id: UUID) -> Collection:
     return Collection(noderef_id=noderef_id)
 
@@ -124,6 +125,25 @@ async def get_many(
         return [Collection.parse_elastic_hit(hit) for hit in response]
 
 
+async def get_many_sorted(
+    root_noderef_id: UUID = PORTAL_ROOT_ID, size: int = ELASTIC_MAX_SIZE
+) -> List[Collection]:
+    s = Search().query(query_collections(root_noderef_id))
+
+    response: Response = s.source(
+        [
+            ElasticResourceAttribute.NODEREF_ID,
+            CollectionAttribute.TITLE,
+            CollectionAttribute.PATH,
+            CollectionAttribute.PARENT_ID,
+        ]
+    ).sort(CollectionAttribute.FULLPATH)[:size].execute()
+
+    if response.success():
+        return [Collection.parse_elastic_hit(hit) for hit in response]
+
+
+# TODO: move to learning_material crud
 async def get_child_materials_with_missing_attributes(
     noderef_id: UUID,
     missing_attr_filter: MissingMaterialAttributeFilter,
@@ -138,6 +158,7 @@ async def get_child_materials_with_missing_attributes(
     )
 
 
+# TODO: eliminate
 async def get_child_collections_with_missing_attributes(
     noderef_id: UUID,
     missing_attr_filter: MissingAttributeFilter,
@@ -152,33 +173,11 @@ async def get_child_collections_with_missing_attributes(
     )
 
 
-async def get_descendant_collections_materials_counts(
-    ancestor_id: UUID, size: int = ELASTIC_MAX_SIZE,
+async def material_counts_by_descendant(
+    ancestor_id: UUID,
 ) -> DescendantCollectionsMaterialsCounts:
-    s = Search().query(
-        qbool(
-            filter=[
-                *type_filter[ResourceType.MATERIAL],
-                *base_filter,
-                qterm(
-                    qfield=LearningMaterialAttribute.COLLECTION_PATH, value=ancestor_id
-                ),
-            ]
-        )
-    )
-    s.aggs.bucket(
-        "grouped_by_collection",
-        acomposite(
-            sources=[
-                {
-                    "noderef_id": aterms(
-                        qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID
-                    )
-                }
-            ],
-            size=size,
-        ),
-    ).pipeline(
+    s = Search().query(query_materials(ancestor_id=ancestor_id))
+    s.aggs.bucket("grouped_by_collection", agg_materials_by_collection()).pipeline(
         "sorted_by_count", abucketsort(sort=[{"_count": {"order": "asc"}}]),
     )
 
@@ -186,33 +185,3 @@ async def get_descendant_collections_materials_counts(
 
     if response.success():
         return DescendantCollectionsMaterialsCounts.parse_elastic_response(response)
-
-
-async def get_portals() -> Dict[UUID, str]:
-    return {v["value"]: k for k, v in PORTALS.items()}
-
-
-async def get_portals_sorted(
-    root_noderef_id: UUID = PORTAL_ROOT_ID, size: int = ELASTIC_MAX_SIZE
-) -> List[Collection]:
-    s = Search().query(
-        qbool(
-            filter=[
-                *type_filter[ResourceType.COLLECTION],
-                *base_filter,
-                qterm(qfield=CollectionAttribute.PATH, value=root_noderef_id),
-            ]
-        )
-    )
-
-    response: Response = s.source(
-        [
-            ElasticResourceAttribute.NODEREF_ID,
-            CollectionAttribute.TITLE,
-            CollectionAttribute.PATH,
-            CollectionAttribute.PARENT_ID,
-        ]
-    ).sort(CollectionAttribute.FULLPATH)[:size].execute()
-
-    if response.success():
-        return [Collection.parse_elastic_hit(hit) for hit in response]

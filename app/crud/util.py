@@ -33,6 +33,13 @@ class CollectionNotFoundException(HTTPException):
         )
 
 
+class StatsNotFoundException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=HTTP_404_NOT_FOUND, detail=f"Stats not found",
+        )
+
+
 def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:
     compiled = query.compile(dialect=dialect)
     compiled_params = sorted(compiled.params.items())

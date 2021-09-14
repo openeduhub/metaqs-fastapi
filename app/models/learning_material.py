@@ -32,9 +32,8 @@ _LEARNING_MATERIAL = TypeVar("_LEARNING_MATERIAL")
 
 class _LearningMaterialAttribute(Field):
     TITLE = ("properties.cclom:title", FieldType.TEXT)
-    KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
-    EDUCONTEXT = ("properties.ccm:educationalcontext", FieldType.TEXT)
     SUBJECTS = ("properties.ccm:taxonid", FieldType.TEXT)
+    SUBJECTS_DE = ("i18n.de_DE.ccm:taxonid", FieldType.TEXT)
     WWW_URL = ("properties.ccm:wwwurl", FieldType.TEXT)
     DESCRIPTION = ("properties.cclom:general_description", FieldType.TEXT)
     LICENSES = ("properties.ccm:commonlicense_key", FieldType.TEXT)
@@ -45,6 +44,16 @@ class _LearningMaterialAttribute(Field):
         "properties.ccm:educationallearningresourcetype",
         FieldType.TEXT,
     )
+    LEARNINGRESOURCE_TYPE_DE = (
+        "i18n.de_DE.ccm:educationallearningresourcetype",
+        FieldType.TEXT,
+    )
+    EDUENDUSERROLE_DE = (
+        "i18n.de_DE.ccm:educationalintendedenduserrole",
+        FieldType.TEXT,
+    )
+    CONTAINS_ADS = ("properties.ccm:containsAdvertisement", FieldType.TEXT)
+    OBJECT_TYPE = ("properties.ccm:objecttype", FieldType.TEXT)
 
 
 LearningMaterialAttribute = Field(

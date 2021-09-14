@@ -2,6 +2,7 @@ from fastapi import (
     FastAPI,
     Depends,
 )
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
@@ -64,7 +65,7 @@ class Ping(BaseModel):
     response_model=Ping,
     tags=["healthcheck"],
 )
-async def ping():
+async def ping_api():
     return {"status": "ok"}
 
 
@@ -75,6 +76,11 @@ async def pg_version(postgres: Postgres = Depends(get_postgres),):
     async with postgres.pool.acquire() as conn:
         version = await conn.fetchval("select version()")
         return {"version": version}
+
+
+for route in app.routes:
+    if isinstance(route, APIRoute):
+        route.operation_id = route.name
 
 
 if __name__ == "__main__":

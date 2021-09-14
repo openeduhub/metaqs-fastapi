@@ -1,3 +1,5 @@
+import json
+
 import asyncpg
 
 from app.core.config import (
@@ -20,6 +22,11 @@ async def connect_to_postgres():
         min_size=MIN_CONNECTIONS_COUNT,
         max_size=MAX_CONNECTIONS_COUNT,
     )
+
+    async with postgres.pool.acquire() as conn:
+        await conn.set_type_codec(
+            "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+        )
 
 
 async def close_postgres_connection():

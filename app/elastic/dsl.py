@@ -36,11 +36,10 @@ def qmatch(**kwargs) -> Query:
     return Q("match", **kwargs)
 
 
-def qwildcard(qfield: Union[Field, str], value, **kwargs) -> Query:
+def qwildcard(qfield: Union[Field, str], value: str) -> Query:
     if isinstance(qfield, Field):
         qfield = qfield.path
-    kwargs[qfield] = value
-    return Q("wildcard", **kwargs)
+    return Q("wildcard", **{qfield: {"value": value}})
 
 
 def qbool(**kwargs) -> Query:
@@ -64,6 +63,14 @@ def qboolor(conditions: List[Query]) -> Query:
 def aterms(qfield: Union[Field, str], **kwargs) -> Agg:
     kwargs["field"] = handle_text_field(qfield)
     return A("terms", **kwargs)
+
+
+def afilter(query: Query) -> Agg:
+    return A("filter", query)
+
+
+def amissing(qfield: Union[Field, str]) -> Agg:
+    return afilter(query=qbool(must_not=qwildcard(qfield=qfield, value="*")))
 
 
 def acomposite(sources: List[Union[Query, dict]], **kwargs) -> Agg:

@@ -1,6 +1,8 @@
-from typing import Union
+from typing import Union, Iterable
 
 from elasticsearch_dsl import connections
+from elasticsearch_dsl.response import AggResponse
+from glom import merge
 
 from app.core.config import (
     ELASTICSEARCH_URL,
@@ -32,5 +34,31 @@ def handle_text_field(qfield: Union[Field, str]) -> str:
         return qfield
 
 
-def merge_agg(agg) -> dict:
-    return {}
+def merge_agg_response(
+    agg: AggResponse, key: str = "key", result_field: str = "doc_count"
+) -> dict:
+    def op(carry: dict, bucket: dict):
+        carry[bucket[key]] = bucket[result_field]
+
+    return merge(agg.buckets, op=op)
+
+
+def merge_composite_agg_response(
+    agg: AggResponse, key: str, result_field: str = "doc_count"
+) -> dict:
+    def op(carry: dict, bucket: dict):
+        carry[bucket["key"][key]] = bucket[result_field]
+
+    return merge(agg.buckets, op=op)
+
+
+def fold_agg_response(
+    agg: AggResponse, key: str, result_field: str = "doc_count"
+) -> dict:
+    return merge(agg)
+
+
+def map_reduce_agg_response(
+    agg: AggResponse, key: str, result_field: str = "doc_count"
+) -> dict:
+    return merge(agg)
