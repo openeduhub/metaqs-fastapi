@@ -70,7 +70,7 @@ def afilter(query: Query) -> Agg:
 
 
 def amissing(qfield: Union[Field, str]) -> Agg:
-    return afilter(query=qbool(must_not=qwildcard(qfield=qfield, value="*")))
+    return A("missing", field=handle_text_field(qfield))
 
 
 def acomposite(sources: List[Union[Query, dict]], **kwargs) -> Agg:
