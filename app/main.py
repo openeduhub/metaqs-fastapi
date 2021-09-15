@@ -32,26 +32,18 @@ from app.pg.pg_utils import (
 )
 from app.pg.postgres import Postgres
 
-app = FastAPI(title=PROJECT_NAME, debug=DEBUG)
+fastapi_app = FastAPI(title=PROJECT_NAME, debug=DEBUG)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_HOSTS,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-Total-Count"],
-)
-app.add_middleware(RawContextMiddleware)
+fastapi_app.add_middleware(RawContextMiddleware)
 
-app.add_event_handler("startup", connect_to_elastic)
-app.add_event_handler("shutdown", close_elastic_connection)
-app.add_event_handler("shutdown", close_postgres_connection)
+fastapi_app.add_event_handler("startup", connect_to_elastic)
+fastapi_app.add_event_handler("shutdown", close_elastic_connection)
+fastapi_app.add_event_handler("shutdown", close_postgres_connection)
 
-app.add_exception_handler(HTTPException, http_error_handler)
-app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
+fastapi_app.add_exception_handler(HTTPException, http_error_handler)
+fastapi_app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
 
-app.include_router(api_router, prefix=f"/api/{API_VERSION}")
+fastapi_app.include_router(api_router, prefix=f"/api/{API_VERSION}")
 
 
 class Ping(BaseModel):
@@ -60,7 +52,7 @@ class Ping(BaseModel):
     )
 
 
-@app.get(
+@fastapi_app.get(
     "/_ping",
     description="Ping function for automatic health check.",
     response_model=Ping,
@@ -72,7 +64,7 @@ async def ping_api():
     return {"status": "ok"}
 
 
-@app.get(
+@fastapi_app.get(
     "/pg-version", tags=["healthcheck"], response_model=dict,
 )
 async def pg_version(postgres: Postgres = Depends(get_postgres),):
@@ -81,9 +73,19 @@ async def pg_version(postgres: Postgres = Depends(get_postgres),):
         return {"version": version}
 
 
-for route in app.routes:
+for route in fastapi_app.routes:
     if isinstance(route, APIRoute):
         route.operation_id = route.name
+
+
+app = CORSMiddleware(
+    app=fastapi_app,
+    allow_origins=ALLOWED_HOSTS,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Total-Count"],
+)
 
 
 if __name__ == "__main__":
