@@ -119,10 +119,10 @@ async def _read_stats(
             conn=conn, stat_type=stat_type, noderef_id=noderef_id, at=at
         )
 
-    if not row:
-        row = await crud_stats.read_stats_file(
-            noderef_id=noderef_id, stat_type=stat_type
-        )
+    # if not row:
+    #     row = await crud_stats.read_stats_file(
+    #         noderef_id=noderef_id, stat_type=stat_type
+    #     )
 
     return row
 
