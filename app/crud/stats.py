@@ -194,7 +194,7 @@ async def run_stats(noderef_id: UUID):
                 derived_at=derived_at,
             )
 
-        await write_stats_file(row, stat_type=stat_type)
+        # await write_stats_file(row, stat_type=stat_type)
 
     # TODO: encapsulate in transaction
     await store_stats((StatType.MATERIAL_TYPES, material_types_stats))
