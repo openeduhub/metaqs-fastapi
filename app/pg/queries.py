@@ -8,9 +8,9 @@ from asyncpg import (
 )
 from sqlalchemy import select
 
-from app.crud import compile_query
 from app.models.stats import StatType
 from .metadata import Stats
+from .pg_utils import compile_query
 
 
 async def stats_latest(

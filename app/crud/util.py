@@ -1,30 +1,16 @@
 from enum import Enum
-from pprint import pformat
-from typing import (
-    List,
-    Tuple,
-)
+from typing import List
 from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy.sql import ClauseElement
-from sqlalchemy.dialects.postgresql import pypostgresql
 from starlette.exceptions import HTTPException
 from starlette.status import HTTP_404_NOT_FOUND
 
-from app.core.logging import logger
 from app.models.collection import (
     Collection,
     PortalTreeNode,
 )
-
-dialect = pypostgresql.dialect(paramstyle="pyformat")
-dialect.implicit_returning = True
-dialect.supports_native_enum = True
-dialect.supports_smallserial = True
-dialect._backslash_escapes = False
-dialect.supports_sane_multi_rowcount = True
-dialect._has_native_hstore = True
 
 
 class CollectionNotFoundException(HTTPException):
@@ -40,25 +26,6 @@ class StatsNotFoundException(HTTPException):
         super().__init__(
             status_code=HTTP_404_NOT_FOUND, detail=f"Stats not found",
         )
-
-
-def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:
-    compiled = query.compile(dialect=dialect)
-    compiled_params = sorted(compiled.params.items())
-
-    mapping = {key: "$" + str(i) for i, (key, _) in enumerate(compiled_params, start=1)}
-    compiled_query = compiled.string % mapping
-
-    processors = compiled._bind_processors
-    params = [
-        processors[key](val) if key in processors else val
-        for key, val in compiled_params
-    ]
-
-    logger.debug(
-        f"Compiled query to postgres:\n{pformat(compiled_query)}\nParams:\n{pformat(params)}"
-    )
-    return compiled_query, params, compiled._result_columns
 
 
 class OrderByDirection(str, Enum):
