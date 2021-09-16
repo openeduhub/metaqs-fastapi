@@ -2,6 +2,7 @@ import asyncio
 import json
 from collections import defaultdict
 from datetime import datetime
+from pprint import pformat
 from typing import List, Union
 from uuid import UUID
 
@@ -36,6 +37,7 @@ from app.pg.queries import (
     stats_latest,
     stats_timeline,
 )
+from core.logging import logger
 from .elastic import (
     agg_collection_validation,
     agg_materials_by_collection,
@@ -212,6 +214,7 @@ async def read_stats(
     conn: Connection, stat_type: StatType, noderef_id: UUID, at: datetime = None
 ) -> Union[dict, None]:
     row = await stats_latest(conn, stat_type, noderef_id, at=at)
+    logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
 
     if row:
         return dict(row)
