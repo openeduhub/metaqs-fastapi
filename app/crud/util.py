@@ -1,4 +1,5 @@
 from enum import Enum
+from pprint import pformat
 from typing import (
     List,
     Tuple,
@@ -11,6 +12,7 @@ from sqlalchemy.dialects.postgresql import pypostgresql
 from starlette.exceptions import HTTPException
 from starlette.status import HTTP_404_NOT_FOUND
 
+from app.core.logging import logger
 from app.models.collection import (
     Collection,
     PortalTreeNode,
@@ -53,6 +55,9 @@ def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:
         for key, val in compiled_params
     ]
 
+    logger.debug(
+        f"Compiled query to postgres:\n{pformat(compiled_query)}\nParams:\n{pformat(params)}"
+    )
     return compiled_query, params, compiled._result_columns
 
 
