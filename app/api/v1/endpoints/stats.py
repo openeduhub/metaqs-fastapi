@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import (
     Callable,
@@ -147,6 +148,9 @@ async def read_stats(
     if not row:
         raise StatsNotFoundException
 
+    if not isinstance(row["stats"], dict):
+        row["stats"] = json.loads(row["stats"])
+
     return StatsResponse(derived_at=row["derived_at"], stats=row["stats"])
 
 
@@ -170,6 +174,9 @@ async def read_stats_validation(
 
     if not row:
         raise StatsNotFoundException
+
+    if not isinstance(row["stats"], list):
+        row["stats"] = json.loads(row["stats"])
 
     response = [
         ValidationStatsResponse[MaterialValidationStats](
@@ -223,6 +230,9 @@ async def read_stats_validation_collection(
 
     if not row:
         raise StatsNotFoundException
+
+    if not isinstance(row["stats"], list):
+        row["stats"] = json.loads(row["stats"])
 
     response = [
         ValidationStatsResponse[CollectionValidationStats](
