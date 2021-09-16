@@ -214,9 +214,9 @@ async def read_stats(
     conn: Connection, stat_type: StatType, noderef_id: UUID, at: datetime = None
 ) -> Union[dict, None]:
     row = await stats_latest(conn, stat_type, noderef_id, at=at)
-    logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
 
     if row:
+        logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
         return dict(row)
 
 
