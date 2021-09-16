@@ -1,6 +1,6 @@
 from fastapi import (
-    FastAPI,
     Depends,
+    FastAPI,
 )
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
