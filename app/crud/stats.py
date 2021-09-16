@@ -37,7 +37,7 @@ from app.pg.queries import (
     stats_latest,
     stats_timeline,
 )
-from core.logging import logger
+from app.core.logging import logger
 from .elastic import (
     agg_collection_validation,
     agg_materials_by_collection,
