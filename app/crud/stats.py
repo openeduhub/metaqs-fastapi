@@ -14,11 +14,7 @@ from asyncpg import (
 )
 from elasticsearch_dsl.response import Response
 from fastapi import HTTPException
-from glom import (
-    glom,
-    merge,
-    Iter,
-)
+from glom import merge
 
 import app.crud.collection as crud_collection
 from app.core.config import (
@@ -26,7 +22,6 @@ from app.core.config import (
     DEBUG,
 )
 
-# from app.core.util import slugify
 from app.elastic import Search
 from app.elastic.utils import (
     merge_agg_response,
@@ -56,26 +51,6 @@ from .elastic import (
 from .util import build_portal_tree
 
 
-async def material_types() -> List[str]:
-    s = Search().query(query_materials())
-    s.aggs.bucket("material_types", agg_material_types())
-
-    response: Response = s[:0].execute()
-
-    if response.success():
-        # TODO: refactor algorithm
-        return glom(
-            response.aggregations.material_types.buckets,
-            # (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
-            Iter("key").all(),
-        )
-
-
-# async def material_types_lut() -> dict:
-#     mt = await get_material_types()
-#     return {v: k for k, v in mt.items()}
-
-
 async def material_counts_by_type(root_noderef_id: UUID) -> dict:
     s = Search().query(query_materials(ancestor_id=root_noderef_id))
     s.aggs.bucket("material_types", agg_material_types_by_collection())
@@ -84,10 +59,8 @@ async def material_counts_by_type(root_noderef_id: UUID) -> dict:
     response: Response = s[:0].execute()
 
     if response.success():
-        # lut = await material_types_lut()
 
         def fold_material_types(carry, bucket):
-            # material_type = lut[stat["key"]["material_type"]]
             material_type = bucket["key"]["material_type"]
             if not material_type:
                 material_type = "N/A"
@@ -119,7 +92,6 @@ async def search_hits_by_material_type(query_string: str) -> dict:
     response: Response = s[:0].execute()
 
     if response.success():
-        # lut = await material_types_lut()
         stats = merge_agg_response(response.aggregations.material_types)
         stats["total"] = sum(stats.values())
         return stats
@@ -201,7 +173,9 @@ async def run_stats(noderef_id: UUID):
         # await write_stats_file(row, stat_type=stat_type)
 
     # TODO: encapsulate in transaction
-    await store_stats((StatType.PORTAL_TREE, [json.loads(node.json()) for node in tree]))
+    await store_stats(
+        (StatType.PORTAL_TREE, [json.loads(node.json()) for node in tree])
+    )
     await store_stats((StatType.MATERIAL_TYPES, material_types_stats))
     await store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats))
     await store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats))

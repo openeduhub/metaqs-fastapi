@@ -5,12 +5,20 @@ from typing import (
 )
 from uuid import UUID
 
+from elasticsearch_dsl.response import Response
+from glom import (
+    glom,
+    Iter,
+)
 from pydantic import BaseModel
 
+# from app.core.util import slugify
 from app.core.config import ELASTIC_MAX_SIZE
-from app.crud.elastic import (
+from .elastic import (
     ResourceType,
+    agg_material_types,
     get_many_base_query,
+    query_materials,
     query_missing_material_license,
 )
 from app.elastic import (
@@ -74,3 +82,23 @@ async def get_many(
 
     if response.success():
         return [LearningMaterial.parse_elastic_hit(hit) for hit in response]
+
+
+async def material_types() -> List[str]:
+    s = Search().query(query_materials())
+    s.aggs.bucket("material_types", agg_material_types())
+
+    response: Response = s[:0].execute()
+
+    if response.success():
+        # TODO: refactor algorithm
+        return glom(
+            response.aggregations.material_types.buckets,
+            # (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
+            Iter("key").all(),
+        )
+
+
+# async def material_types_lut() -> dict:
+#     mt = await get_material_types()
+#     return {v: k for k, v in mt.items()}

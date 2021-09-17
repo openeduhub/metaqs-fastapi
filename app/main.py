@@ -1,6 +1,7 @@
 from fastapi import (
     Depends,
     FastAPI,
+    Security,
 )
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
@@ -10,6 +11,7 @@ from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 from starlette_context.middleware import RawContextMiddleware
 
 from app.api import router as api_router
+from app.api.auth import authenticated
 from app.core.config import (
     ALLOWED_HOSTS,
     API_VERSION,
@@ -42,8 +44,6 @@ fastapi_app.add_event_handler("shutdown", close_postgres_connection)
 fastapi_app.add_exception_handler(HTTPException, http_error_handler)
 fastapi_app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
 
-fastapi_app.include_router(api_router, prefix=f"/api/{API_VERSION}")
-
 
 class Ping(BaseModel):
     status: str = Field(
@@ -55,20 +55,25 @@ class Ping(BaseModel):
     "/_ping",
     description="Ping function for automatic health check.",
     response_model=Ping,
-    tags=["healthcheck"],
+    tags=["Healthcheck"],
 )
 async def ping_api():
     return {"status": "ok"}
 
 
 @fastapi_app.get(
-    "/pg-version", tags=["healthcheck"], response_model=dict,
+    "/pg-version",
+    response_model=dict,
+    dependencies=[Security(authenticated)],
+    tags=["Authenticated"],
 )
 async def pg_version(postgres: Postgres = Depends(get_postgres),):
     async with postgres.pool.acquire() as conn:
         version = await conn.fetchval("select version()")
         return {"version": version}
 
+
+fastapi_app.include_router(api_router, prefix=f"/api/{API_VERSION}")
 
 for route in fastapi_app.routes:
     if isinstance(route, APIRoute):
