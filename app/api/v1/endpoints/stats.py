@@ -353,7 +353,7 @@ async def read_stats_timeline(
     "/run-stats",
     dependencies=[Security(authenticated)],
     status_code=HTTP_202_ACCEPTED,
-    tags=["Authenticated"],
+    tags=["Statistics", "Authenticated"],
 )
 async def run_stats(*, background_tasks: BackgroundTasks):
     dispatch_portal_tasks(

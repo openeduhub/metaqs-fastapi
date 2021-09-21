@@ -20,7 +20,7 @@ router = APIRouter()
     "/clear-stats",
     dependencies=[Security(authenticated)],
     status_code=HTTP_204_NO_CONTENT,
-    tags=["Authenticated"],
+    tags=["Statistics", "Authenticated"],
 )
 async def clear_stats():
     await crud_seeds.clear_stats()
@@ -30,7 +30,7 @@ async def clear_stats():
     "/seed-stats",
     dependencies=[Security(authenticated)],
     status_code=HTTP_202_ACCEPTED,
-    tags=["Authenticated"],
+    tags=["Statistics", "Authenticated"],
 )
 async def seed_stats(*, background_tasks: BackgroundTasks):
     dispatch_portal_tasks(
