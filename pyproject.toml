@@ -21,6 +21,7 @@ python-slugify = "^5.0.2"
 starlette-context = "^0.3.3"
 aiofiles = "^0.7.0"
 radon = "^5.1.0"
+httpx = {version = "^1.0.0*", allow-prereleases = true}
 
 [tool.poetry.dev-dependencies]
 
