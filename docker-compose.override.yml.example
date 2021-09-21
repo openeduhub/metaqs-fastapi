@@ -11,6 +11,7 @@ services:
   fastapi:
     environment:
       - LOG_LEVEL=debug
+      - LOGGER=uvicorn
     volumes:
       - ./:/app
     command: ["/start-reload.sh"]
