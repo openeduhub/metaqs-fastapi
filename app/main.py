@@ -27,6 +27,7 @@ from app.elastic.utils import (
     close_elastic_connection,
     connect_to_elastic,
 )
+from app.http import close_client
 from app.pg.pg_utils import (
     get_postgres,
     close_postgres_connection,
@@ -40,6 +41,7 @@ fastapi_app.add_middleware(RawContextMiddleware)
 fastapi_app.add_event_handler("startup", connect_to_elastic)
 fastapi_app.add_event_handler("shutdown", close_elastic_connection)
 fastapi_app.add_event_handler("shutdown", close_postgres_connection)
+fastapi_app.add_event_handler("shutdown", close_client)
 
 fastapi_app.add_exception_handler(HTTPException, http_error_handler)
 fastapi_app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
