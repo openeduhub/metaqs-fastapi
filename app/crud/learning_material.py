@@ -84,6 +84,15 @@ async def get_many(
         return [LearningMaterial.parse_elastic_hit(hit) for hit in response]
 
 
+async def material_count(ancestor_id: UUID) -> int:
+    s = Search().query(query_materials(ancestor_id=ancestor_id))
+
+    response: Response = s[:0].execute()
+
+    if response.success():
+        return response.hits.total.value
+
+
 async def material_types() -> List[str]:
     s = Search().query(query_materials())
     s.aggs.bucket("material_types", agg_material_types())
