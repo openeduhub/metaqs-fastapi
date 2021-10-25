@@ -26,6 +26,7 @@ import app.crud.collection as crud_collection
 import app.crud.stats as crud_stats
 from app.api.auth import authenticated
 from app.core.config import PORTAL_ROOT_ID
+from app.crud.elastic import ResourceType
 from app.crud.util import (
     StatsNotFoundException,
     dispatch_portal_tasks,
@@ -45,6 +46,12 @@ from app.models.stats import (
 )
 from app.pg.pg_utils import get_postgres
 from app.pg.postgres import Postgres
+from app.score import (
+    ScoreModulator,
+    ScoreWeights,
+    calc_scores,
+    calc_weighted_score,
+)
 
 router = APIRouter()
 
@@ -66,6 +73,65 @@ def at_datetime_param(
     ),
 ) -> datetime:
     return at
+
+
+def score_modulator_param(
+    *, score_modulator: Optional[ScoreModulator] = Query(None)
+) -> ScoreModulator:
+    return score_modulator
+
+
+def score_weights_param(
+    *, score_weights: Optional[ScoreWeights] = Query(None)
+) -> ScoreWeights:
+    return score_weights
+
+
+@router.get(
+    "/collections/{noderef_id}/stats/score",
+    response_model=dict,
+    status_code=HTTP_200_OK,
+    responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"}},
+    tags=["Statistics"],
+)
+async def score(
+    *,
+    noderef_id: UUID = Depends(noderef_id_param),
+    score_modulator: ScoreModulator = Depends(score_modulator_param),
+    score_weights: ScoreWeights = Depends(score_weights_param),
+    response: Response,
+):
+    if not score_modulator:
+        score_modulator = ScoreModulator.LINEAR
+    if not score_weights:
+        score_weights = ScoreWeights.UNIFORM
+
+    collection_stats = await crud_stats.run_stats_score(
+        noderef_id=noderef_id, resource_type=ResourceType.COLLECTION
+    )
+
+    collection_scores = calc_scores(
+        stats=collection_stats, score_modulator=score_modulator
+    )
+
+    material_stats = await crud_stats.run_stats_score(
+        noderef_id=noderef_id, resource_type=ResourceType.MATERIAL
+    )
+
+    material_scores = calc_scores(stats=material_stats, score_modulator=score_modulator)
+
+    score_ = calc_weighted_score(
+        collection_scores=collection_scores,
+        material_scores=material_scores,
+        score_weights=score_weights,
+    )
+
+    response.headers["X-Query-Count"] = str(len(context.get("elastic_queries", [])))
+    return {
+        "score": score_,
+        "collections": {"total": collection_stats["total"], **collection_scores},
+        "materials": {"total": material_stats["total"], **material_scores},
+    }
 
 
 @router.get(

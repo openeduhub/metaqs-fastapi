@@ -35,12 +35,15 @@ from app.pg.queries import (
     stats_timeline,
 )
 from app.core.logging import logger
+from app.crud.elastic import ResourceType
 from .elastic import (
     agg_collection_validation,
     agg_materials_by_collection,
     agg_material_types,
     agg_material_types_by_collection,
     agg_material_validation,
+    aggs_collection_validation,
+    aggs_material_validation,
     parse_agg_collection_validation_response,
     parse_agg_material_validation_response,
     query_collections,
@@ -49,6 +52,26 @@ from .elastic import (
     search_materials,
 )
 from .util import build_portal_tree
+
+
+async def run_stats_score(noderef_id: UUID, resource_type: ResourceType) -> dict:
+    query, aggs = None, None
+    if resource_type is ResourceType.COLLECTION:
+        query, aggs = query_collections, aggs_collection_validation
+    elif resource_type is ResourceType.MATERIAL:
+        query, aggs = query_materials, aggs_material_validation
+
+    s = Search().query(query(ancestor_id=noderef_id))
+    for name, _agg in aggs.items():
+        s.aggs.bucket(name, _agg)
+
+    response: Response = s[:0].execute()
+
+    if response.success():
+        return {
+            "total": response.hits.total.value,
+            **{k: v["doc_count"] for k, v in response.aggregations.to_dict().items()},
+        }
 
 
 async def material_counts_by_type(root_noderef_id: UUID) -> dict:
