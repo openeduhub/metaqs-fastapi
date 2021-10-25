@@ -10,7 +10,6 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
-    Path,
     Query,
     Response,
     Security,
@@ -25,6 +24,10 @@ from starlette_context import context
 import app.crud.collection as crud_collection
 import app.crud.stats as crud_stats
 from app.api.auth import authenticated
+from app.api.util import (
+    portal_id_param,
+    portal_id_with_root_param,
+)
 from app.core.config import PORTAL_ROOT_ID
 from app.crud.elastic import ResourceType
 from app.crud.util import (
@@ -54,12 +57,6 @@ from app.score import (
 )
 
 router = APIRouter()
-
-
-def noderef_id_param(
-    *, noderef_id: UUID = Path(..., examples=crud_collection.PORTALS),
-) -> UUID:
-    return noderef_id
 
 
 def at_datetime_param(
@@ -96,7 +93,7 @@ def score_weights_param(
 )
 async def score(
     *,
-    noderef_id: UUID = Depends(noderef_id_param),
+    noderef_id: UUID = Depends(portal_id_param),
     score_modulator: ScoreModulator = Depends(score_modulator_param),
     score_weights: ScoreWeights = Depends(score_weights_param),
     response: Response,
@@ -156,7 +153,7 @@ async def search_hits_by_material_type(
     tags=["Statistics"],
 )
 async def material_counts_by_type(
-    *, noderef_id: UUID = Depends(noderef_id_param), response: Response,
+    *, noderef_id: UUID = Depends(portal_id_param), response: Response,
 ):
     material_counts = await crud_stats.material_counts_by_type(
         root_noderef_id=noderef_id
@@ -175,15 +172,7 @@ async def material_counts_by_type(
     tags=["Statistics"],
 )
 async def material_counts_tree(
-    *,
-    noderef_id: UUID = Path(
-        ...,
-        examples={
-            "Alle Fachportale": {"value": PORTAL_ROOT_ID},
-            **crud_collection.PORTALS,
-        },
-    ),
-    response: Response,
+    *, noderef_id: UUID = Depends(portal_id_with_root_param), response: Response,
 ):
     descendant_collections = await crud_collection.get_many(
         ancestor_id=noderef_id,
@@ -258,7 +247,7 @@ async def _read_stats(
 )
 async def read_stats(
     *,
-    noderef_id: UUID = Depends(noderef_id_param),
+    noderef_id: UUID = Depends(portal_id_param),
     at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
@@ -285,7 +274,7 @@ async def read_stats(
 )
 async def read_stats_validation(
     *,
-    noderef_id: UUID = Depends(noderef_id_param),
+    noderef_id: UUID = Depends(portal_id_param),
     at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
@@ -338,7 +327,7 @@ async def read_stats_validation(
 )
 async def read_stats_validation_collection(
     *,
-    noderef_id: UUID = Depends(noderef_id_param),
+    noderef_id: UUID = Depends(portal_id_param),
     at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
@@ -380,7 +369,7 @@ async def read_stats_validation_collection(
 )
 async def read_stats_portal_tree(
     *,
-    noderef_id: UUID = Depends(noderef_id_param),
+    noderef_id: UUID = Depends(portal_id_param),
     at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
@@ -408,7 +397,7 @@ async def read_stats_portal_tree(
 )
 async def read_stats_timeline(
     *,
-    noderef_id: UUID = Depends(noderef_id_param),
+    noderef_id: UUID = Depends(portal_id_param),
     postgres: Postgres = Depends(get_postgres),
 ):
     async with postgres.pool.acquire() as conn:
