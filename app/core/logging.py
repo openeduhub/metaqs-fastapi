@@ -1,3 +1,4 @@
 import logging
+import os
 
-logger = logging.getLogger("gunicorn.error")
+logger = logging.getLogger(f"{os.getenv('LOGGER', 'gunicorn')}.error")

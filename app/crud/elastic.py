@@ -259,20 +259,24 @@ def agg_material_types_by_collection(size: int = ELASTIC_MAX_SIZE) -> Agg:
     )
 
 
+aggs_collection_validation = {
+    "missing_title": amissing(qfield=CollectionAttribute.TITLE),
+    "short_title": afilter(Q("range", char_count_title={"gt": 0, "lt": 5})),
+    "missing_keywords": amissing(qfield=CollectionAttribute.KEYWORDS),
+    "few_keywords": afilter(Q("range", token_count_keywords={"gt": 0, "lt": 3})),
+    "missing_description": amissing(qfield=CollectionAttribute.DESCRIPTION),
+    "short_description": afilter(
+        Q("range", char_count_description={"gt": 0, "lt": 30})
+    ),
+    "missing_educontext": amissing(qfield=CollectionAttribute.EDUCONTEXT),
+}
+
+
 def agg_collection_validation(size: int = ELASTIC_MAX_SIZE) -> Agg:
     agg = aterms(qfield=CollectionAttribute.NODEREF_ID, size=size)
-    agg.bucket("missing_title", amissing(qfield=CollectionAttribute.TITLE))
-    agg.bucket("short_title", afilter(Q("range", char_count_title={"gt": 0, "lt": 5})))
-    agg.bucket("missing_keywords", amissing(qfield=CollectionAttribute.KEYWORDS))
-    agg.bucket(
-        "few_keywords", afilter(Q("range", token_count_keywords={"gt": 0, "lt": 3}))
-    )
-    agg.bucket("missing_description", amissing(qfield=CollectionAttribute.DESCRIPTION))
-    agg.bucket(
-        "short_description",
-        afilter(Q("range", char_count_description={"gt": 0, "lt": 30})),
-    )
-    agg.bucket("missing_educontext", amissing(qfield=CollectionAttribute.EDUCONTEXT))
+
+    for name, _agg in aggs_collection_validation.items():
+        agg.bucket(name, _agg)
 
     return agg
 
@@ -328,28 +332,35 @@ def parse_agg_collection_validation_response(agg_response: AggResponse):
     ]
 
 
+aggs_material_validation = {
+    "missing_title": amissing(qfield=LearningMaterialAttribute.TITLE),
+    "missing_keywords": amissing(qfield=LearningMaterialAttribute.KEYWORDS),
+    "missing_subjects": amissing(qfield=LearningMaterialAttribute.SUBJECTS),
+    "missing_description": amissing(qfield=LearningMaterialAttribute.DESCRIPTION),
+    "missing_license": afilter(query=query_missing_material_license()),
+    "missing_educontext": amissing(qfield=LearningMaterialAttribute.EDUCONTEXT),
+    "missing_ads_qualifier": amissing(qfield=LearningMaterialAttribute.CONTAINS_ADS),
+    "missing_material_type": amissing(
+        qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE
+    ),
+    "missing_object_type": amissing(qfield=LearningMaterialAttribute.OBJECT_TYPE),
+}
+
+
+def agg_material_score(size: int = ELASTIC_MAX_SIZE) -> Agg:
+    agg = aterms(qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID, size=size)
+
+    for name, _agg in aggs_material_validation.items():
+        agg.bucket(name, _agg)
+
+    return agg
+
+
 def agg_material_validation(size: int = ELASTIC_MAX_SIZE) -> Agg:
     agg = aterms(qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID, size=size)
-    agg.bucket("missing_title", amissing(qfield=LearningMaterialAttribute.TITLE))
-    agg.bucket("missing_keywords", amissing(qfield=LearningMaterialAttribute.KEYWORDS))
-    agg.bucket("missing_subjects", amissing(qfield=LearningMaterialAttribute.SUBJECTS))
-    agg.bucket(
-        "missing_description", amissing(qfield=LearningMaterialAttribute.DESCRIPTION)
-    )
-    agg.bucket("missing_license", afilter(query=query_missing_material_license()))
-    agg.bucket(
-        "missing_educontext", amissing(qfield=LearningMaterialAttribute.EDUCONTEXT)
-    )
-    agg.bucket(
-        "missing_ads_qualifier", amissing(qfield=LearningMaterialAttribute.CONTAINS_ADS)
-    )
-    agg.bucket(
-        "missing_material_type",
-        amissing(qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE),
-    )
-    agg.bucket(
-        "missing_object_type", amissing(qfield=LearningMaterialAttribute.OBJECT_TYPE)
-    )
+
+    for name, _agg in aggs_material_validation.items():
+        agg.bucket(name, _agg)
 
     return agg
 

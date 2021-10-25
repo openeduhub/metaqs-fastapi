@@ -22,7 +22,7 @@ services:
 #      - redisinsight
       - postgres
       - elasticsearch
-      - kibana
+#      - kibana
     environment:
       - NGINX_HOST=localhost
     networks: [ frontend ]
@@ -105,14 +105,14 @@ services:
     volumes:
       - elastic-data:/usr/share/elasticsearch/data
 
-  kibana:
-    container_name: kibana
-    image: docker.elastic.co/kibana/kibana:7.13.4
-    environment:
-      - ELASTICSEARCH_HOSTS=["${ELASTICSEARCH_URL:-http://elasticsearch:9200}"]
-    depends_on:
-      - elasticsearch
-    networks: [ frontend, backend ]
+#  kibana:
+#    container_name: kibana
+#    image: docker.elastic.co/kibana/kibana:7.13.4
+#    environment:
+#      - ELASTICSEARCH_HOSTS=["${ELASTICSEARCH_URL:-http://elasticsearch:9200}"]
+#    depends_on:
+#      - elasticsearch
+#    networks: [ frontend, backend ]
 
 #  superset:
 #    container_name: superset

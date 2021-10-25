@@ -1,15 +1,11 @@
 import json
 from datetime import datetime
 from typing import (
-    Callable,
-    Coroutine,
     List,
     Optional,
-    Union,
 )
 from uuid import UUID
 
-from asyncpg import Record
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -27,22 +23,35 @@ from starlette.status import (
 from starlette_context import context
 
 import app.crud.collection as crud_collection
-
-import app.crud.seeds as crud_seeds
 import app.crud.stats as crud_stats
 from app.api.auth import authenticated
 from app.core.config import PORTAL_ROOT_ID
-from app.crud.util import StatsNotFoundException
+from app.crud.elastic import ResourceType
+from app.crud.util import (
+    StatsNotFoundException,
+    dispatch_portal_tasks,
+)
+from app.models.collection import (
+    CollectionAttribute,
+    CollectionMaterialsCount,
+    PortalTreeNode,
+)
 from app.models.oeh_validation import MaterialFieldValidation
 from app.models.stats import (
     CollectionValidationStats,
     MaterialValidationStats,
-    StatsResponse,
     StatType,
+    StatsResponse,
     ValidationStatsResponse,
 )
 from app.pg.pg_utils import get_postgres
 from app.pg.postgres import Postgres
+from app.score import (
+    ScoreModulator,
+    ScoreWeights,
+    calc_scores,
+    calc_weighted_score,
+)
 
 router = APIRouter()
 
@@ -66,17 +75,63 @@ def at_datetime_param(
     return at
 
 
+def score_modulator_param(
+    *, score_modulator: Optional[ScoreModulator] = Query(None)
+) -> ScoreModulator:
+    return score_modulator
+
+
+def score_weights_param(
+    *, score_weights: Optional[ScoreWeights] = Query(None)
+) -> ScoreWeights:
+    return score_weights
+
+
 @router.get(
-    "/stats/material-types",
-    response_model=List[str],
+    "/collections/{noderef_id}/stats/score",
+    response_model=dict,
     status_code=HTTP_200_OK,
+    responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"}},
     tags=["Statistics"],
 )
-async def get_material_types(response: Response):
-    material_types = await crud_stats.material_types()
+async def score(
+    *,
+    noderef_id: UUID = Depends(noderef_id_param),
+    score_modulator: ScoreModulator = Depends(score_modulator_param),
+    score_weights: ScoreWeights = Depends(score_weights_param),
+    response: Response,
+):
+    if not score_modulator:
+        score_modulator = ScoreModulator.LINEAR
+    if not score_weights:
+        score_weights = ScoreWeights.UNIFORM
 
-    response.headers["X-Query-Count"] = str(len(context.get("elastic_queries")))
-    return material_types
+    collection_stats = await crud_stats.run_stats_score(
+        noderef_id=noderef_id, resource_type=ResourceType.COLLECTION
+    )
+
+    collection_scores = calc_scores(
+        stats=collection_stats, score_modulator=score_modulator
+    )
+
+    material_stats = await crud_stats.run_stats_score(
+        noderef_id=noderef_id, resource_type=ResourceType.MATERIAL
+    )
+
+    material_scores = calc_scores(stats=material_stats, score_modulator=score_modulator)
+
+    score_ = calc_weighted_score(
+        collection_scores=collection_scores,
+        material_scores=material_scores,
+        score_weights=score_weights,
+    )
+
+    response.headers["X-Query-Count"] = str(len(context.get("elastic_queries", [])))
+    return {
+        "score": score_,
+        "collections": {"total": collection_stats["total"], **collection_scores},
+        "materials": {"total": material_stats["total"], **material_scores},
+    }
 
 
 @router.get(
@@ -110,6 +165,72 @@ async def material_counts_by_type(
     response.headers["X-Total-Count"] = str(len(material_counts))
     response.headers["X-Query-Count"] = str(len(context.get("elastic_queries")))
     return material_counts
+
+
+@router.get(
+    "/collections/{noderef_id}/stats/descendant-collections-materials-counts",
+    response_model=List[CollectionMaterialsCount],
+    status_code=HTTP_200_OK,
+    responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"}},
+    tags=["Statistics"],
+)
+async def material_counts_tree(
+    *,
+    noderef_id: UUID = Path(
+        ...,
+        examples={
+            "Alle Fachportale": {"value": PORTAL_ROOT_ID},
+            **crud_collection.PORTALS,
+        },
+    ),
+    response: Response,
+):
+    descendant_collections = await crud_collection.get_many(
+        ancestor_id=noderef_id,
+        source_fields={
+            CollectionAttribute.NODEREF_ID,
+            CollectionAttribute.PATH,
+            CollectionAttribute.TITLE,
+        },
+    )
+    materials_counts = await crud_collection.material_counts_by_descendant(
+        ancestor_id=noderef_id,
+    )
+
+    descendant_collections = {
+        collection.noderef_id: collection.title for collection in descendant_collections
+    }
+    stats = []
+    errors = []
+    for record in materials_counts.results:
+        try:
+            title = descendant_collections.pop(record.noderef_id)
+        except KeyError:
+            errors.append(record.noderef_id)
+            continue
+
+        stats.append(
+            CollectionMaterialsCount(
+                noderef_id=record.noderef_id,
+                title=title,
+                materials_count=record.materials_count,
+            )
+        )
+
+    stats = [
+        *[
+            CollectionMaterialsCount(
+                noderef_id=noderef_id, title=title, materials_count=0,
+            )
+            for (noderef_id, title) in descendant_collections.items()
+        ],
+        *stats,
+    ]
+
+    response.headers["X-Total-Count"] = str(len(stats))
+    response.headers["X-Query-Count"] = str(len(context.get("elastic_queries")))
+    # response.headers["X-Total-Errors"] = str(len(errors))
+    return stats
 
 
 async def _read_stats(
@@ -251,6 +372,34 @@ async def read_stats_validation_collection(
 
 
 @router.get(
+    "/read-stats/{noderef_id}/portal-tree",
+    response_model=List[PortalTreeNode],
+    status_code=HTTP_200_OK,
+    responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"}},
+    tags=["Statistics"],
+)
+async def read_stats_portal_tree(
+    *,
+    noderef_id: UUID = Depends(noderef_id_param),
+    at: Optional[datetime] = Depends(at_datetime_param),
+    postgres: Postgres = Depends(get_postgres),
+):
+    row = await _read_stats(
+        postgres, stat_type=StatType.PORTAL_TREE, noderef_id=noderef_id, at=at
+    )
+
+    if not row:
+        raise StatsNotFoundException
+
+    if not isinstance(row["stats"], list):
+        row["stats"] = json.loads(row["stats"])
+
+    response = [PortalTreeNode.construct(**node) for node in row["stats"]]
+
+    return response
+
+
+@router.get(
     "/read-stats/{noderef_id}/timeline",
     response_model=List[datetime],
     status_code=HTTP_200_OK,
@@ -266,41 +415,15 @@ async def read_stats_timeline(
         return await crud_stats.read_stats_timeline(conn=conn, noderef_id=noderef_id)
 
 
-def _dispatch_portal_tasks(
-    noderef_id: UUID, f: Callable[[UUID], Coroutine], background_tasks: BackgroundTasks,
-):
-    if str(noderef_id) == PORTAL_ROOT_ID:
-        for _, v in crud_collection.PORTALS.items():
-            if v["value"] == PORTAL_ROOT_ID:
-                continue
-            background_tasks.add_task(f, noderef_id=v["value"])
-    else:
-        background_tasks.add_task(f, noderef_id=noderef_id)
-
-
 @router.post(
     "/run-stats",
     dependencies=[Security(authenticated)],
     status_code=HTTP_202_ACCEPTED,
-    tags=["Statistics"],
+    tags=["Statistics", "Authenticated"],
 )
 async def run_stats(*, background_tasks: BackgroundTasks):
-    _dispatch_portal_tasks(
+    dispatch_portal_tasks(
         noderef_id=PORTAL_ROOT_ID,
         f=crud_stats.run_stats,
-        background_tasks=background_tasks,
-    )
-
-
-@router.post(
-    "/seed-stats",
-    dependencies=[Security(authenticated)],
-    status_code=HTTP_202_ACCEPTED,
-    tags=["Statistics"],
-)
-async def seed_stats(*, background_tasks: BackgroundTasks):
-    _dispatch_portal_tasks(
-        noderef_id=PORTAL_ROOT_ID,
-        f=crud_seeds.seed_stats,
         background_tasks=background_tasks,
     )

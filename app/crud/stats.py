@@ -1,4 +1,4 @@
-import asyncio
+# import asyncio
 import json
 from collections import defaultdict
 from datetime import datetime
@@ -14,17 +14,14 @@ from asyncpg import (
 )
 from elasticsearch_dsl.response import Response
 from fastapi import HTTPException
-from glom import (
-    glom,
-    merge,
-    Iter,
-)
+from glom import merge
 
 import app.crud.collection as crud_collection
-from app.core.config import DATA_DIR
+from app.core.config import (
+    DATA_DIR,
+    DEBUG,
+)
 
-# from app.core.util import slugify
-from app.crud.util import StatsNotFoundException
 from app.elastic import Search
 from app.elastic.utils import (
     merge_agg_response,
@@ -38,12 +35,15 @@ from app.pg.queries import (
     stats_timeline,
 )
 from app.core.logging import logger
+from app.crud.elastic import ResourceType
 from .elastic import (
     agg_collection_validation,
     agg_materials_by_collection,
     agg_material_types,
     agg_material_types_by_collection,
     agg_material_validation,
+    aggs_collection_validation,
+    aggs_material_validation,
     parse_agg_collection_validation_response,
     parse_agg_material_validation_response,
     query_collections,
@@ -51,26 +51,27 @@ from .elastic import (
     runtime_mappings_collection_validation,
     search_materials,
 )
+from .util import build_portal_tree
 
 
-async def material_types() -> List[str]:
-    s = Search().query(query_materials())
-    s.aggs.bucket("material_types", agg_material_types())
+async def run_stats_score(noderef_id: UUID, resource_type: ResourceType) -> dict:
+    query, aggs = None, None
+    if resource_type is ResourceType.COLLECTION:
+        query, aggs = query_collections, aggs_collection_validation
+    elif resource_type is ResourceType.MATERIAL:
+        query, aggs = query_materials, aggs_material_validation
+
+    s = Search().query(query(ancestor_id=noderef_id))
+    for name, _agg in aggs.items():
+        s.aggs.bucket(name, _agg)
 
     response: Response = s[:0].execute()
 
     if response.success():
-        # TODO: refactor algorithm
-        return glom(
-            response.aggregations.material_types.buckets,
-            # (Iter("key").map(lambda k: {slugify(k): k}).all(), merge,),
-            Iter("key").all(),
-        )
-
-
-# async def material_types_lut() -> dict:
-#     mt = await get_material_types()
-#     return {v: k for k, v in mt.items()}
+        return {
+            "total": response.hits.total.value,
+            **{k: v["doc_count"] for k, v in response.aggregations.to_dict().items()},
+        }
 
 
 async def material_counts_by_type(root_noderef_id: UUID) -> dict:
@@ -81,10 +82,8 @@ async def material_counts_by_type(root_noderef_id: UUID) -> dict:
     response: Response = s[:0].execute()
 
     if response.success():
-        # lut = await material_types_lut()
 
         def fold_material_types(carry, bucket):
-            # material_type = lut[stat["key"]["material_type"]]
             material_type = bucket["key"]["material_type"]
             if not material_type:
                 material_type = "N/A"
@@ -116,7 +115,6 @@ async def search_hits_by_material_type(query_string: str) -> dict:
     response: Response = s[:0].execute()
 
     if response.success():
-        # lut = await material_types_lut()
         stats = merge_agg_response(response.aggregations.material_types)
         stats["total"] = sum(stats.values())
         return stats
@@ -166,19 +164,18 @@ async def run_stats_validation_materials(root_noderef_id: UUID) -> List[dict]:
 
 
 async def run_stats(noderef_id: UUID):
+    portals = await crud_collection.get_many_sorted(root_noderef_id=noderef_id)
+    tree = await build_portal_tree(portals=portals, root_noderef_id=noderef_id)
+
     material_types_stats = await run_stats_material_types(root_noderef_id=noderef_id)
 
     validation_collections_stats = await run_stats_validation_collections(
         root_noderef_id=noderef_id
     )
-    # if not validation_collections_stats:
-    #     validation_collections_stats = [{}]
 
     validation_materials_stats = await run_stats_validation_materials(
         root_noderef_id=noderef_id
     )
-    # if not validation_materials_stats:
-    #     validation_materials_stats = [{}]
 
     derived_at = datetime.now()
 
@@ -199,11 +196,15 @@ async def run_stats(noderef_id: UUID):
         # await write_stats_file(row, stat_type=stat_type)
 
     # TODO: encapsulate in transaction
+    await store_stats(
+        (StatType.PORTAL_TREE, [json.loads(node.json()) for node in tree])
+    )
     await store_stats((StatType.MATERIAL_TYPES, material_types_stats))
     await store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats))
     await store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats))
 
     # results = await asyncio.gather([
+    #     store_stats((StatType.PORTAL_TREE, tree)),
     #     store_stats((StatType.MATERIAL_TYPES, material_types_stats)),
     #     store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats[0])),
     #     store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats[0])),
@@ -216,7 +217,9 @@ async def read_stats(
     row = await stats_latest(conn, stat_type, noderef_id, at=at)
 
     if row:
-        logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
+        if DEBUG:
+            logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
+
         return dict(row)
 
 

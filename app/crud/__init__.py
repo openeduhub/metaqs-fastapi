@@ -8,7 +8,6 @@ from .learning_material import (
 )
 
 from .util import (
-    compile_query,
     OrderByDirection,
     OrderByParams,
 )
