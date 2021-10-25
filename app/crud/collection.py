@@ -45,7 +45,7 @@ from .learning_material import (
 )
 
 PORTALS = {
-    "Physik": {"value": "93f22c9b-0d3a-4c1c-8987-4c8e83f3a92e"},
+    # "Physik": {"value": "unknown"},
     "Mathematik": {"value": "bd8be6d5-0fbe-4534-a4b3-773154ba6abc"},
     "Biologie": {"value": "15fce411-54d9-467f-8f35-61ea374a298d"},
     "Chemie": {"value": "4940d5da-9b21-4ec0-8824-d16e0409e629"},
