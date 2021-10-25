@@ -89,10 +89,7 @@ async def stats_insert(
     )
 
 
-async def stats_duplicate_backwards(
-    conn: Connection,
-    noderef_id: UUID,
-) -> str:
+async def stats_duplicate_backwards(conn: Connection, noderef_id: UUID,) -> str:
     return await conn.execute(
         """
         insert into stats (noderef_id,
