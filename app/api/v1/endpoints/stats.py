@@ -28,12 +28,8 @@ from app.api.util import (
     portal_id_param,
     portal_id_with_root_param,
 )
-from app.core.config import PORTAL_ROOT_ID
 from app.crud.elastic import ResourceType
-from app.crud.util import (
-    StatsNotFoundException,
-    dispatch_portal_tasks,
-)
+from app.crud.util import StatsNotFoundException
 from app.models.collection import (
     CollectionAttribute,
     CollectionMaterialsCount,
@@ -411,8 +407,6 @@ async def read_stats_timeline(
     tags=["Statistics", "Authenticated"],
 )
 async def run_stats(*, background_tasks: BackgroundTasks):
-    dispatch_portal_tasks(
-        noderef_id=PORTAL_ROOT_ID,
-        f=crud_stats.run_stats,
-        background_tasks=background_tasks,
-    )
+    portals = await crud_collection.get_portals()
+    for portal_id in portals.keys():
+        background_tasks.add_task(crud_stats.run_stats, noderef_id=portal_id)

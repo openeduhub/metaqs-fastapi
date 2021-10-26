@@ -8,10 +8,9 @@ from starlette.status import (
     HTTP_204_NO_CONTENT,
 )
 
+import app.crud.collection as crud_collection
 import app.crud.seeds as crud_seeds
 from app.api.auth import authenticated
-from app.core.config import PORTAL_ROOT_ID
-from app.crud.util import dispatch_portal_tasks
 
 router = APIRouter()
 
@@ -33,8 +32,6 @@ async def clear_stats():
     tags=["Statistics", "Authenticated"],
 )
 async def seed_stats(*, background_tasks: BackgroundTasks):
-    dispatch_portal_tasks(
-        noderef_id=PORTAL_ROOT_ID,
-        f=crud_seeds.seed_stats,
-        background_tasks=background_tasks,
-    )
+    portals = await crud_collection.get_portals()
+    for portal_id in portals.keys():
+        background_tasks.add_task(crud_seeds.seed_stats, noderef_id=portal_id)

@@ -96,8 +96,23 @@ class MissingAttributeFilter(BaseModel):
         return query_dict
 
 
-async def get_portals() -> Dict[UUID, str]:
-    return {v["value"]: k for k, v in PORTALS.items()}
+async def get_portals():
+    s = Search().query(query_collections(ancestor_id=PORTAL_ROOT_ID))
+
+    response: Response = s.source(
+        [
+            ElasticResourceAttribute.NODEREF_ID,
+            CollectionAttribute.TITLE,
+            CollectionAttribute.PATH,
+            CollectionAttribute.PARENT_ID,
+        ]
+    )[:ELASTIC_MAX_SIZE].execute()
+
+    if response.success():
+        collections = [Collection.parse_elastic_hit(hit) for hit in response]
+        return {
+            c.noderef_id: c.title for c in collections if c.parent_id == PORTAL_ROOT_ID
+        }
 
 
 async def get_single(noderef_id: UUID) -> Collection:

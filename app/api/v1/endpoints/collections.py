@@ -36,7 +36,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/collections", response_model=Dict[UUID, str], tags=["Collections"],
+    "/collections", tags=["Collections"],
 )
 async def get_portals():
     return await crud_collection.get_portals()
