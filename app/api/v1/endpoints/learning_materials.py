@@ -8,7 +8,6 @@ from uuid import UUID
 from fastapi import (
     APIRouter,
     Depends,
-    Path,
 )
 from starlette.responses import Response
 from starlette.status import (
@@ -23,8 +22,8 @@ from app.api.util import (
     filter_response_fields,
     materials_filter_params,
     material_response_fields,
+    portal_id_with_root_param,
 )
-from app.core.config import PORTAL_ROOT_ID
 from app.crud import MissingMaterialAttributeFilter
 from app.models.learning_material import (
     LearningMaterial,
@@ -57,13 +56,7 @@ async def get_material_types(response: Response):
 )
 async def filter_materials_with_missing_attributes(
     *,
-    noderef_id: UUID = Path(
-        ...,
-        examples={
-            "Alle Fachportale": {"value": PORTAL_ROOT_ID},
-            **crud_collection.PORTALS,
-        },
-    ),
+    noderef_id: UUID = Depends(portal_id_with_root_param),
     missing_attr_filter: MissingMaterialAttributeFilter = Depends(
         materials_filter_params
     ),

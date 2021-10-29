@@ -1,4 +1,5 @@
 from typing import (
+    Dict,
     List,
     Optional,
     Set,
@@ -8,7 +9,6 @@ from uuid import UUID
 from fastapi import (
     APIRouter,
     Depends,
-    Path,
 )
 from starlette.responses import Response
 from starlette.status import (
@@ -22,8 +22,8 @@ from app.api.util import (
     collections_filter_params,
     collection_response_fields,
     filter_response_fields,
+    portal_id_with_root_param,
 )
-from app.core.config import PORTAL_ROOT_ID
 from app.crud import MissingCollectionAttributeFilter
 from app.crud.util import build_portal_tree
 from app.models.collection import (
@@ -50,15 +50,7 @@ async def get_portals():
     tags=["Collections"],
 )
 async def get_portal_tree(
-    *,
-    noderef_id: UUID = Path(
-        ...,
-        examples={
-            "Alle Fachportale": {"value": PORTAL_ROOT_ID},
-            **crud_collection.PORTALS,
-        },
-    ),
-    response: Response,
+    *, noderef_id: UUID = Depends(portal_id_with_root_param), response: Response,
 ):
     portals = await crud_collection.get_many_sorted(root_noderef_id=noderef_id)
     tree = await build_portal_tree(portals=portals, root_noderef_id=noderef_id)
@@ -77,13 +69,7 @@ async def get_portal_tree(
 )
 async def filter_collections_with_missing_attributes(
     *,
-    noderef_id: UUID = Path(
-        ...,
-        examples={
-            "Alle Fachportale": {"value": PORTAL_ROOT_ID},
-            **crud_collection.PORTALS,
-        },
-    ),
+    noderef_id: UUID = Depends(portal_id_with_root_param),
     missing_attr_filter: MissingCollectionAttributeFilter = Depends(
         collections_filter_params
     ),

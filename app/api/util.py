@@ -3,6 +3,7 @@ from typing import (
     Optional,
     Set,
 )
+from uuid import UUID
 
 from fastapi import (
     Path,
@@ -11,6 +12,8 @@ from fastapi import (
 from pydantic import BaseModel
 from starlette.responses import Response
 
+import app.crud.collection as crud_collection
+from app.core.config import PORTAL_ROOT_ID
 from app.elastic.fields import Field
 from app.models.collection import CollectionAttribute
 from app.models.learning_material import LearningMaterialAttribute
@@ -20,6 +23,26 @@ from app.crud import (
     MissingCollectionAttributeFilter,
     MissingMaterialAttributeFilter,
 )
+
+
+def portal_id_param(
+    *, noderef_id: UUID = Path(..., examples=crud_collection.PORTALS),
+) -> UUID:
+    return noderef_id
+
+
+def portal_id_with_root_param(
+    *,
+    noderef_id: UUID = Path(
+        ...,
+        examples={
+            "Alle Fachportale": {"value": PORTAL_ROOT_ID},
+            **crud_collection.PORTALS,
+        },
+    ),
+) -> UUID:
+    return noderef_id
+
 
 CollectionResponseField = Field(
     "CollectionAttribute",

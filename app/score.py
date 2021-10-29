@@ -44,6 +44,9 @@ class ScoreWeights(str, Enum):
 
 
 def calc_scores(stats: dict, score_modulator: ScoreModulator) -> dict:
+    if stats["total"] == 0:
+        return {k: 0 for k in stats.keys()}
+
     return {
         k: 1 - score_modulator(v / stats["total"])
         for k, v in stats.items()
