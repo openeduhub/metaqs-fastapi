@@ -23,18 +23,3 @@ async def stats_latest(
 
     compiled_query, params, _ = compile_query(query)
     return await conn.fetchrow(compiled_query, *params)
-
-
-async def stats_earliest(
-    conn: Connection, stat_type: StatType, noderef_id: UUID
-) -> Record:
-    query = (
-        Stats.select()
-        .where(Stats.c.noderef_id == noderef_id)
-        .where(Stats.c.stat_type == stat_type.value)
-        .order_by(Stats.c.derived_at.asc())
-        .limit(1)
-    )
-
-    compiled_query, params, _ = compile_query(query)
-    return await conn.fetchrow(compiled_query, *params)
