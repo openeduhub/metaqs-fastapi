@@ -4,16 +4,12 @@ from pprint import pformat
 from typing import Union
 from uuid import UUID
 
-from asyncpg import (
-    Connection,
-)
+from asyncpg import Connection
 from elasticsearch_dsl.response import Response
 from glom import merge
 
 import app.crud.collection as crud_collection
-from app.core.config import (
-    DEBUG,
-)
+from app.core.config import DEBUG
 
 from app.elastic import Search
 from app.elastic.utils import (
@@ -21,9 +17,7 @@ from app.elastic.utils import (
     merge_composite_agg_response,
 )
 from app.models.stats import StatType
-from app.pg.queries import (
-    stats_latest,
-)
+from app.pg.queries import stats_latest
 from app.core.logging import logger
 from app.crud.elastic import ResourceType
 from .elastic import (

@@ -302,9 +302,7 @@ async def read_stats_validation_collection(
     postgres: Postgres = Depends(get_postgres),
 ):
     row = await _read_stats(
-        postgres,
-        stat_type=StatType.VALIDATION_COLLECTIONS,
-        noderef_id=noderef_id,
+        postgres, stat_type=StatType.VALIDATION_COLLECTIONS, noderef_id=noderef_id,
     )
 
     if not row:
