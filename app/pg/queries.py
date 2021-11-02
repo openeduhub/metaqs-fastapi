@@ -8,17 +8,11 @@ from asyncpg import (
 )
 from sqlalchemy import (
     select,
-    text,
 )
 
 from app.models.stats import StatType
 from .metadata import Stats
 from .pg_utils import compile_query
-
-
-async def stats_clear(conn: Connection) -> Record:
-    compiled_query, params, _ = compile_query(Stats.delete().where(text("1 = 1")))
-    return await conn.fetchrow(compiled_query, *params)
 
 
 async def stats_latest(
@@ -86,25 +80,6 @@ async def stats_insert(
         stat_type.value,
         stats,
         derived_at,
-    )
-
-
-async def stats_duplicate_backwards(conn: Connection, noderef_id: UUID,) -> str:
-    return await conn.execute(
-        """
-        insert into stats (noderef_id,
-                           stat_type,
-                           stats,
-                           derived_at)
-        select distinct on (stat_type) noderef_id,
-                                       stat_type,
-                                       stats,
-                                       derived_at - interval '1 day'
-        from stats
-        where noderef_id = $1
-        order by stat_type, derived_at asc
-        """,
-        noderef_id,
     )
 
 
