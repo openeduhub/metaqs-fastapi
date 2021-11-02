@@ -6,19 +6,14 @@ from pprint import pformat
 from typing import List, Union
 from uuid import UUID
 
-from aiofiles import open
-from aiofiles.os import mkdir
 from asyncpg import (
     Connection,
-    Record,
 )
 from elasticsearch_dsl.response import Response
-from fastapi import HTTPException
 from glom import merge
 
 import app.crud.collection as crud_collection
 from app.core.config import (
-    DATA_DIR,
     DEBUG,
 )
 
@@ -193,8 +188,6 @@ async def run_stats(noderef_id: UUID):
                 derived_at=derived_at,
             )
 
-        # await write_stats_file(row, stat_type=stat_type)
-
     # TODO: encapsulate in transaction
     await store_stats(
         (StatType.PORTAL_TREE, [json.loads(node.json()) for node in tree])
@@ -228,32 +221,3 @@ async def read_stats_timeline(conn: Connection, noderef_id: UUID) -> List[dateti
 
     if rows:
         return [row["derived_at"] for row in rows]
-
-
-async def write_stats_file(row: Record, stat_type: StatType):
-    try:
-        await mkdir(DATA_DIR / stat_type.value)
-    except FileExistsError:
-        ...
-
-    try:
-        async with open(
-            (DATA_DIR / stat_type.value) / str(row["noderef_id"]), mode="w"
-        ) as f:
-            await f.write(
-                json.dumps(
-                    {"derived_at": row["derived_at"].isoformat(), "stats": row["stats"]}
-                )
-            )
-    except OSError:
-        raise HTTPException(status_code=500)
-
-
-async def read_stats_file(noderef_id: UUID, stat_type: StatType) -> Union[dict, None]:
-    try:
-        async with open(DATA_DIR / stat_type.value / str(noderef_id), mode="r") as f:
-            content = await f.read()
-    except FileNotFoundError:
-        return None
-
-    return json.loads(content)
