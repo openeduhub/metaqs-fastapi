@@ -379,22 +379,6 @@ async def read_stats_portal_tree(
     return response
 
 
-@router.get(
-    "/read-stats/{noderef_id}/timeline",
-    response_model=List[datetime],
-    status_code=HTTP_200_OK,
-    responses={HTTP_404_NOT_FOUND: {"description": "Collection not found"}},
-    tags=["Statistics"],
-)
-async def read_stats_timeline(
-    *,
-    noderef_id: UUID = Depends(portal_id_param),
-    postgres: Postgres = Depends(get_postgres),
-):
-    async with postgres.pool.acquire() as conn:
-        return await crud_stats.read_stats_timeline(conn=conn, noderef_id=noderef_id)
-
-
 @router.post(
     "/run-stats",
     dependencies=[Security(authenticated)],

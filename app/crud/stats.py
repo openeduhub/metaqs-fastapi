@@ -27,7 +27,6 @@ from app.pg.pg_utils import get_postgres
 from app.pg.queries import (
     stats_insert,
     stats_latest,
-    stats_timeline,
 )
 from app.core.logging import logger
 from app.crud.elastic import ResourceType
@@ -214,10 +213,3 @@ async def read_stats(
             logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
 
         return dict(row)
-
-
-async def read_stats_timeline(conn: Connection, noderef_id: UUID) -> List[datetime]:
-    rows = await stats_timeline(conn, noderef_id=noderef_id)
-
-    if rows:
-        return [row["derived_at"] for row in rows]

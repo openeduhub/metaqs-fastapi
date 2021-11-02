@@ -6,9 +6,6 @@ from asyncpg import (
     Connection,
     Record,
 )
-from sqlalchemy import (
-    select,
-)
 
 from app.models.stats import StatType
 from .metadata import Stats
@@ -81,15 +78,3 @@ async def stats_insert(
         stats,
         derived_at,
     )
-
-
-# TODO: specify return type
-async def stats_timeline(conn: Connection, noderef_id: UUID):
-    query = (
-        select(Stats.c.derived_at)
-        .where(Stats.c.noderef_id == noderef_id)
-        .order_by(Stats.c.derived_at.desc())
-    )
-
-    compiled_query, params, _ = compile_query(query)
-    return await conn.fetch(compiled_query, *params)
