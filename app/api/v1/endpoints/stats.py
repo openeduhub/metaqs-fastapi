@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from typing import (
     List,
     Optional,
@@ -49,19 +48,6 @@ from app.score import (
 )
 
 router = APIRouter()
-
-
-def at_datetime_param(
-    *,
-    at: Optional[datetime] = Query(
-        None,
-        examples={
-            "latest": {"value": None},
-            "filtered": {"value": datetime.now().strftime("%Y-%m-%dT%H:%M")},
-        },
-    ),
-) -> datetime:
-    return at
 
 
 def score_modulator_param(
@@ -215,11 +201,11 @@ async def material_counts_tree(
 
 
 async def _read_stats(
-    postgres: Postgres, stat_type: StatType, noderef_id: UUID, at: datetime = None
+    postgres: Postgres, stat_type: StatType, noderef_id: UUID
 ) -> dict:
     async with postgres.pool.acquire() as conn:
         row = await crud_stats.read_stats(
-            conn=conn, stat_type=stat_type, noderef_id=noderef_id, at=at
+            conn=conn, stat_type=stat_type, noderef_id=noderef_id
         )
 
     return row
@@ -235,11 +221,10 @@ async def _read_stats(
 async def read_stats(
     *,
     noderef_id: UUID = Depends(portal_id_param),
-    at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
     row = await _read_stats(
-        postgres, stat_type=StatType.MATERIAL_TYPES, noderef_id=noderef_id, at=at
+        postgres, stat_type=StatType.MATERIAL_TYPES, noderef_id=noderef_id
     )
 
     if not row:
@@ -262,11 +247,10 @@ async def read_stats(
 async def read_stats_validation(
     *,
     noderef_id: UUID = Depends(portal_id_param),
-    at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
     row = await _read_stats(
-        postgres, stat_type=StatType.VALIDATION_MATERIALS, noderef_id=noderef_id, at=at
+        postgres, stat_type=StatType.VALIDATION_MATERIALS, noderef_id=noderef_id
     )
 
     if not row:
@@ -315,14 +299,12 @@ async def read_stats_validation(
 async def read_stats_validation_collection(
     *,
     noderef_id: UUID = Depends(portal_id_param),
-    at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
     row = await _read_stats(
         postgres,
         stat_type=StatType.VALIDATION_COLLECTIONS,
         noderef_id=noderef_id,
-        at=at,
     )
 
     if not row:
@@ -357,11 +339,10 @@ async def read_stats_validation_collection(
 async def read_stats_portal_tree(
     *,
     noderef_id: UUID = Depends(portal_id_param),
-    at: Optional[datetime] = Depends(at_datetime_param),
     postgres: Postgres = Depends(get_postgres),
 ):
     row = await _read_stats(
-        postgres, stat_type=StatType.PORTAL_TREE, noderef_id=noderef_id, at=at
+        postgres, stat_type=StatType.PORTAL_TREE, noderef_id=noderef_id
     )
 
     if not row:

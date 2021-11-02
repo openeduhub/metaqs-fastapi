@@ -1,6 +1,5 @@
 # import asyncio
 from collections import defaultdict
-from datetime import datetime
 from pprint import pformat
 from typing import Union
 from uuid import UUID
@@ -121,9 +120,9 @@ async def run_stats_material_types(root_noderef_id: UUID) -> dict:
 
 
 async def read_stats(
-    conn: Connection, stat_type: StatType, noderef_id: UUID, at: datetime = None
+    conn: Connection, stat_type: StatType, noderef_id: UUID
 ) -> Union[dict, None]:
-    row = await stats_latest(conn, stat_type, noderef_id, at=at)
+    row = await stats_latest(conn, stat_type, noderef_id)
 
     if row:
         if DEBUG:

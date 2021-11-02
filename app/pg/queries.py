@@ -1,4 +1,3 @@
-from datetime import datetime
 from uuid import UUID
 
 from asyncpg import (
@@ -12,16 +11,13 @@ from .pg_utils import compile_query
 
 
 async def stats_latest(
-    conn: Connection, stat_type: StatType, noderef_id: UUID, at: datetime = None
+    conn: Connection, stat_type: StatType, noderef_id: UUID
 ) -> Record:
     query = (
         Stats.select()
         .where(Stats.c.noderef_id == noderef_id)
         .where(Stats.c.stat_type == stat_type.value)
     )
-
-    if at:
-        query = query.where(Stats.c.derived_at <= at)
 
     query = query.order_by(Stats.c.derived_at.desc()).limit(1)
 
