@@ -8,22 +8,18 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     Query,
     Response,
-    Security,
 )
 from starlette.status import (
     HTTP_200_OK,
-    HTTP_202_ACCEPTED,
     HTTP_404_NOT_FOUND,
 )
 from starlette_context import context
 
 import app.crud.collection as crud_collection
 import app.crud.stats as crud_stats
-from app.api.auth import authenticated
 from app.api.util import (
     portal_id_param,
     portal_id_with_root_param,
@@ -377,15 +373,3 @@ async def read_stats_portal_tree(
     response = [PortalTreeNode.construct(**node) for node in row["stats"]]
 
     return response
-
-
-@router.post(
-    "/run-stats",
-    dependencies=[Security(authenticated)],
-    status_code=HTTP_202_ACCEPTED,
-    tags=["Statistics", "Authenticated"],
-)
-async def run_stats(*, background_tasks: BackgroundTasks):
-    portals = await crud_collection.get_portals()
-    for portal_id in portals.keys():
-        background_tasks.add_task(crud_stats.run_stats, noderef_id=portal_id)

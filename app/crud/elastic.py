@@ -4,7 +4,6 @@ from uuid import UUID
 
 from elasticsearch_dsl.aggs import Agg
 from elasticsearch_dsl.query import Query, Q
-from elasticsearch_dsl.response import AggResponse
 
 from app.core.config import ELASTIC_MAX_SIZE
 from app.elastic import (
@@ -19,13 +18,10 @@ from app.elastic import (
     qsimplequerystring,
     qterm,
     qterms,
-    script,
 )
-from app.elastic.utils import handle_text_field
 from app.models.collection import CollectionAttribute
 from app.models.elastic import ElasticResourceAttribute
 from app.models.learning_material import LearningMaterialAttribute
-from app.models.oeh_validation import OehValidationError
 
 MATERIAL_TYPES_MAP_EN_DE = {
     "other web resource": "Andere Web Ressource",
@@ -65,68 +61,6 @@ MATERIAL_TYPES_MAP_EN_DE = {
     "web page": "Website",
     "tool": "Werkzeug",
     "wiki": "Wiki",
-}
-
-runtime_mappings_material_type = {
-    "material_type": {
-        "type": "keyword",
-        "script": script(
-            """
-            if (doc.containsKey(params.field) && !doc[params.field].empty) {
-                if (params.map.containsKey(doc[params.field].value)) {
-                    emit(params.map.get(doc[params.field].value));
-                } else {
-                    emit(doc[params.field].value);
-                }
-            } else {
-                emit("N/A");
-            }
-            """,
-            params={
-                "field": handle_text_field(
-                    LearningMaterialAttribute.LEARNINGRESOURCE_TYPE_DE
-                ),
-                "map": MATERIAL_TYPES_MAP_EN_DE,
-            },
-        ),
-    }
-}
-
-# TODO: parameterize Attribute model
-runtime_mappings_collection_validation = {
-    "char_count_title": {
-        "type": "long",
-        "script": script(
-            """
-            if (doc.containsKey(params.field) && !doc[params.field].empty) {
-                emit(doc[params.field].value.length());
-            }
-            """,
-            params={"field": handle_text_field(CollectionAttribute.TITLE)},
-        ),
-    },
-    "token_count_keywords": {
-        "type": "long",
-        "script": script(
-            """
-            if (doc.containsKey(params.field) && !doc[params.field].empty) {
-                emit(doc[params.field].length);
-            }
-            """,
-            params={"field": handle_text_field(CollectionAttribute.KEYWORDS)},
-        ),
-    },
-    "char_count_description": {
-        "type": "long",
-        "script": script(
-            """
-            if (doc.containsKey(params.field) && !doc[params.field].empty) {
-                emit(doc[params.field].value.length());
-            }
-            """,
-            params={"field": handle_text_field(CollectionAttribute.DESCRIPTION)},
-        ),
-    },
 }
 
 
@@ -271,67 +205,6 @@ aggs_collection_validation = {
     "missing_educontext": amissing(qfield=CollectionAttribute.EDUCONTEXT),
 }
 
-
-def agg_collection_validation(size: int = ELASTIC_MAX_SIZE) -> Agg:
-    agg = aterms(qfield=CollectionAttribute.NODEREF_ID, size=size)
-
-    for name, _agg in aggs_collection_validation.items():
-        agg.bucket(name, _agg)
-
-    return agg
-
-
-def parse_agg_collection_validation_response(agg_response: AggResponse):
-    return [
-        {
-            "noderef_id": bucket["key"],
-            "title": list(
-                filter(
-                    None,
-                    [
-                        OehValidationError.MISSING
-                        if bucket["missing_title"]["doc_count"]
-                        else None,
-                        OehValidationError.TOO_SHORT
-                        if bucket["short_title"]["doc_count"]
-                        else None,
-                    ],
-                )
-            ),
-            "keywords": list(
-                filter(
-                    None,
-                    [
-                        OehValidationError.MISSING
-                        if bucket["missing_keywords"]["doc_count"]
-                        else None,
-                        OehValidationError.TOO_FEW
-                        if bucket["few_keywords"]["doc_count"]
-                        else None,
-                    ],
-                )
-            ),
-            "description": list(
-                filter(
-                    None,
-                    [
-                        OehValidationError.MISSING
-                        if bucket["missing_description"]["doc_count"]
-                        else None,
-                        OehValidationError.TOO_SHORT
-                        if bucket["short_description"]["doc_count"]
-                        else None,
-                    ],
-                )
-            ),
-            "educontext": [OehValidationError.MISSING]
-            if bucket["missing_educontext"]["doc_count"]
-            else [],
-        }
-        for bucket in agg_response.to_dict()["buckets"]
-    ]
-
-
 aggs_material_validation = {
     "missing_title": amissing(qfield=LearningMaterialAttribute.TITLE),
     "missing_keywords": amissing(qfield=LearningMaterialAttribute.KEYWORDS),
@@ -354,27 +227,3 @@ def agg_material_score(size: int = ELASTIC_MAX_SIZE) -> Agg:
         agg.bucket(name, _agg)
 
     return agg
-
-
-def agg_material_validation(size: int = ELASTIC_MAX_SIZE) -> Agg:
-    agg = aterms(qfield=LearningMaterialAttribute.COLLECTION_NODEREF_ID, size=size)
-
-    for name, _agg in aggs_material_validation.items():
-        agg.bucket(name, _agg)
-
-    return agg
-
-
-def parse_agg_material_validation_response(agg_response: AggResponse):
-    # TODO: refactor algorithm
-    return [
-        {
-            "noderef_id": bucket["key"],
-            **{
-                k: v["doc_count"]
-                for k, v in bucket.items()
-                if k not in ("key", "doc_count")
-            },
-        }
-        for bucket in agg_response.to_dict()["buckets"]
-    ]

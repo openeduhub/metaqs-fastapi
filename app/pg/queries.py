@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Union
 from uuid import UUID
 
 from asyncpg import (
@@ -43,38 +42,3 @@ async def stats_earliest(
 
     compiled_query, params, _ = compile_query(query)
     return await conn.fetchrow(compiled_query, *params)
-
-
-async def stats_insert(
-    conn: Connection,
-    noderef_id: UUID,
-    stat_type: StatType,
-    stats: Union[list, dict],
-    derived_at: datetime,
-) -> Record:
-    # query = (
-    #     Stats.insert()
-    #     .values(noderef_id=noderef_id, stats=stats, derived_at=derived_at)
-    #     .returning(literal_column("*"))
-    # )
-    #
-    # compiled_query, params, _ = compile_query(query)
-    # return await conn.fetchrow(compiled_query, *params)
-
-    # there is an issue with json round-trip in this special case which is
-    # related to sqlalchemy query construction and asyncpg query execution.
-    # that is why above code is commented out and the following code uses literal SQL
-    return await conn.fetchrow(
-        """
-        insert into stats (noderef_id,
-                           stat_type,
-                           stats,
-                           derived_at)
-        values ($1, $2, $3, $4)
-        returning *
-        """,
-        noderef_id,
-        stat_type.value,
-        stats,
-        derived_at,
-    )

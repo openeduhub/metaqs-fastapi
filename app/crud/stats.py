@@ -1,9 +1,8 @@
 # import asyncio
-import json
 from collections import defaultdict
 from datetime import datetime
 from pprint import pformat
-from typing import List, Union
+from typing import Union
 from uuid import UUID
 
 from asyncpg import (
@@ -23,29 +22,21 @@ from app.elastic.utils import (
     merge_composite_agg_response,
 )
 from app.models.stats import StatType
-from app.pg.pg_utils import get_postgres
 from app.pg.queries import (
-    stats_insert,
     stats_latest,
 )
 from app.core.logging import logger
 from app.crud.elastic import ResourceType
 from .elastic import (
-    agg_collection_validation,
     agg_materials_by_collection,
     agg_material_types,
     agg_material_types_by_collection,
-    agg_material_validation,
     aggs_collection_validation,
     aggs_material_validation,
-    parse_agg_collection_validation_response,
-    parse_agg_material_validation_response,
     query_collections,
     query_materials,
-    runtime_mappings_collection_validation,
     search_materials,
 )
-from .util import build_portal_tree
 
 
 async def run_stats_score(noderef_id: UUID, resource_type: ResourceType) -> dict:
@@ -127,80 +118,6 @@ async def run_stats_material_types(root_noderef_id: UUID) -> dict:
         }
 
     return stats
-
-
-async def run_stats_validation_collections(root_noderef_id: UUID) -> List[dict]:
-    s = (
-        Search()
-        .query(query_collections(ancestor_id=root_noderef_id))
-        .extra(runtime_mappings=runtime_mappings_collection_validation)
-    )
-    s.aggs.bucket("grouped_by_collection", agg_collection_validation())
-
-    response: Response = s[:0].execute()
-
-    if response.success():
-        return parse_agg_collection_validation_response(
-            response.aggregations.grouped_by_collection
-        )
-
-
-async def run_stats_validation_materials(root_noderef_id: UUID) -> List[dict]:
-    s = Search().query(query_materials(ancestor_id=root_noderef_id))
-    s.aggs.bucket("grouped_by_collection", agg_material_validation())
-
-    response: Response = s[:0].execute()
-
-    if response.success():
-        return parse_agg_material_validation_response(
-            response.aggregations.grouped_by_collection
-        )
-
-
-async def run_stats(noderef_id: UUID):
-    portals = await crud_collection.get_many_sorted(root_noderef_id=noderef_id)
-    tree = await build_portal_tree(portals=portals, root_noderef_id=noderef_id)
-
-    material_types_stats = await run_stats_material_types(root_noderef_id=noderef_id)
-
-    validation_collections_stats = await run_stats_validation_collections(
-        root_noderef_id=noderef_id
-    )
-
-    validation_materials_stats = await run_stats_validation_materials(
-        root_noderef_id=noderef_id
-    )
-
-    derived_at = datetime.now()
-
-    async def store_stats(t):
-        postgres = await get_postgres()
-
-        stat_type, stats = t
-
-        async with postgres.pool.acquire() as conn:
-            row = await stats_insert(
-                conn,
-                noderef_id=noderef_id,
-                stat_type=stat_type,
-                stats=stats,
-                derived_at=derived_at,
-            )
-
-    # TODO: encapsulate in transaction
-    await store_stats(
-        (StatType.PORTAL_TREE, [json.loads(node.json()) for node in tree])
-    )
-    await store_stats((StatType.MATERIAL_TYPES, material_types_stats))
-    await store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats))
-    await store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats))
-
-    # results = await asyncio.gather([
-    #     store_stats((StatType.PORTAL_TREE, tree)),
-    #     store_stats((StatType.MATERIAL_TYPES, material_types_stats)),
-    #     store_stats((StatType.VALIDATION_COLLECTIONS, validation_collections_stats[0])),
-    #     store_stats((StatType.VALIDATION_MATERIALS, validation_materials_stats[0])),
-    # ])
 
 
 async def read_stats(
