@@ -68,7 +68,7 @@ LearningMaterialAttribute = Field(
 class LearningMaterialBase(ElasticResource):
     title: Optional[EmptyStrToNone] = None
     keywords: Optional[List[str]] = None
-    educontext: Optional[List[str]] = None
+    edu_context: Optional[List[str]] = None
     subjects: Optional[List[str]] = None
     www_url: Optional[str] = None
     description: Optional[EmptyStrToNone] = None
@@ -80,7 +80,7 @@ class LearningMaterialBase(ElasticResource):
         LearningMaterialAttribute.NAME,
         LearningMaterialAttribute.TITLE,
         LearningMaterialAttribute.KEYWORDS,
-        LearningMaterialAttribute.EDUCONTEXT,
+        LearningMaterialAttribute.EDU_CONTEXT,
         LearningMaterialAttribute.SUBJECTS,
         LearningMaterialAttribute.WWW_URL,
         LearningMaterialAttribute.DESCRIPTION,
@@ -95,8 +95,8 @@ class LearningMaterialBase(ElasticResource):
                 Coalesce(LearningMaterialAttribute.KEYWORDS.path, default=[]),
                 Iter().all(),
             ),
-            "educontext": (
-                Coalesce(LearningMaterialAttribute.EDUCONTEXT.path, default=[]),
+            "edu_context": (
+                Coalesce(LearningMaterialAttribute.EDU_CONTEXT.path, default=[]),
                 Iter().all(),
             ),
             "subjects": (

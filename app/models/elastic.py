@@ -40,8 +40,8 @@ class ElasticResourceAttribute(Field):
     PROTOCOL = ("nodeRef.storeRef.protocol", FieldType.KEYWORD)
     FULLPATH = ("fullpath", FieldType.KEYWORD)
     KEYWORDS = ("properties.cclom:general_keyword", FieldType.TEXT)
-    EDUCONTEXT = ("properties.ccm:educationalcontext", FieldType.TEXT)
-    EDUCONTEXT_DE = ("i18n.de_DE.ccm:educationalcontext", FieldType.TEXT)
+    EDU_CONTEXT = ("properties.ccm:educationalcontext", FieldType.TEXT)
+    EDU_CONTEXT_DE = ("i18n.de_DE.ccm:educationalcontext", FieldType.TEXT)
 
 
 class ElasticConfig:

@@ -40,7 +40,7 @@ class ElasticValidationStats(GenericModel, Generic[ElasticFieldValidationT]):
     title: Optional[ElasticFieldValidationT]
     keywords: Optional[ElasticFieldValidationT]
     description: Optional[ElasticFieldValidationT]
-    educontext: Optional[ElasticFieldValidationT]
+    edu_context: Optional[ElasticFieldValidationT]
 
 
 class CollectionValidationStats(ElasticValidationStats[List[OehValidationError]]):

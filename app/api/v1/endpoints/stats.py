@@ -270,7 +270,7 @@ async def read_stats_validation(
                     missing=stat["missing_description"]
                 ),
                 license=MaterialFieldValidation(missing=stat["missing_license"]),
-                educontext=MaterialFieldValidation(missing=stat["missing_educontext"]),
+                edu_context=MaterialFieldValidation(missing=stat["missing_edu_context"]),
                 ads_qualifier=MaterialFieldValidation(
                     missing=stat["missing_ads_qualifier"]
                 ),
@@ -318,7 +318,7 @@ async def read_stats_validation_collection(
                 title=stat["title"],
                 keywords=stat["keywords"],
                 description=stat["description"],
-                educontext=stat["educontext"],
+                edu_context=stat["edu_context"],
             ),
         )
         for stat in row["stats"]

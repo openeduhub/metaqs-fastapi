@@ -24,14 +24,14 @@ class ScoreWeights(str, Enum):
             "collections": {
                 "missing_title": 1,
                 "missing_keywords": 1,
-                "missing_educontext": 1,
+                "missing_edu_context": 1,
             },
             "materials": {
                 "missing_title": 1,
                 "missing_license": 1,
                 "missing_keywords": 1,
                 "missing_taxonid": 1,
-                "missing_educontext": 1,
+                "missing_edu_context": 1,
             },
         },
     )

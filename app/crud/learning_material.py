@@ -41,7 +41,7 @@ MissingMaterialField = Field(
             LearningMaterialAttribute.NAME,
             LearningMaterialAttribute.TITLE,
             LearningMaterialAttribute.KEYWORDS,
-            LearningMaterialAttribute.EDUCONTEXT,
+            LearningMaterialAttribute.EDU_CONTEXT,
             LearningMaterialAttribute.SUBJECTS,
             LearningMaterialAttribute.WWW_URL,
             LearningMaterialAttribute.DESCRIPTION,

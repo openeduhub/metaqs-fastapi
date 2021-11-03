@@ -145,7 +145,7 @@ def search_materials(query_str: str) -> Query:
             LearningMaterialAttribute.CONTENT_FULLTEXT,
             LearningMaterialAttribute.SUBJECTS_DE,
             LearningMaterialAttribute.LEARNINGRESOURCE_TYPE_DE,
-            LearningMaterialAttribute.EDUCONTEXT_DE,
+            LearningMaterialAttribute.EDU_CONTEXT_DE,
             LearningMaterialAttribute.EDUENDUSERROLE_DE,
         ],
         default_operator="and",
@@ -202,7 +202,7 @@ aggs_collection_validation = {
     "short_description": afilter(
         Q("range", char_count_description={"gt": 0, "lt": 30})
     ),
-    "missing_educontext": amissing(qfield=CollectionAttribute.EDUCONTEXT),
+    "missing_edu_context": amissing(qfield=CollectionAttribute.EDU_CONTEXT),
 }
 
 aggs_material_validation = {
@@ -211,7 +211,7 @@ aggs_material_validation = {
     "missing_subjects": amissing(qfield=LearningMaterialAttribute.SUBJECTS),
     "missing_description": amissing(qfield=LearningMaterialAttribute.DESCRIPTION),
     "missing_license": afilter(query=query_missing_material_license()),
-    "missing_educontext": amissing(qfield=LearningMaterialAttribute.EDUCONTEXT),
+    "missing_edu_context": amissing(qfield=LearningMaterialAttribute.EDU_CONTEXT),
     "missing_ads_qualifier": amissing(qfield=LearningMaterialAttribute.CONTAINS_ADS),
     "missing_material_type": amissing(
         qfield=LearningMaterialAttribute.LEARNINGRESOURCE_TYPE
