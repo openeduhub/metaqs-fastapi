@@ -47,20 +47,20 @@ class OrderByParams(BaseModel):
 
 
 async def build_portal_tree(
-    portals: List[Collection], root_noderef_id: UUID
+    collections: List[Collection], root_noderef_id: UUID
 ) -> List[PortalTreeNode]:
     lut = {str(root_noderef_id): []}
 
-    for portal in portals:
+    for collection in collections:
         portal_node = PortalTreeNode(
-            noderef_id=portal.noderef_id, title=portal.title, children=[],
+            noderef_id=collection.noderef_id, title=collection.title, children=[],
         )
 
         try:
-            lut[str(portal.parent_id)].append(portal_node)
+            lut[str(collection.parent_id)].append(portal_node)
         except KeyError:
-            lut[str(portal.parent_id)] = [portal_node]
+            lut[str(collection.parent_id)] = [portal_node]
 
-        lut[str(portal.noderef_id)] = portal_node.children
+        lut[str(collection.noderef_id)] = portal_node.children
 
     return lut.get(str(root_noderef_id), [])
