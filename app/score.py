@@ -50,7 +50,7 @@ def calc_scores(stats: dict, score_modulator: ScoreModulator) -> dict:
     return {
         k: 1 - score_modulator(v / stats["total"])
         for k, v in stats.items()
-        if k is not "total"
+        if k != "total"
     }
 
 
