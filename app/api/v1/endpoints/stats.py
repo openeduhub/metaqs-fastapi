@@ -1,10 +1,11 @@
-import json
+from datetime import datetime
 from typing import (
     List,
     Optional,
 )
 from uuid import UUID
 
+from app.pg.queries import stats_latest
 from fastapi import (
     APIRouter,
     Depends,
@@ -24,11 +25,12 @@ from app.api.util import (
     portal_id_with_root_param,
 )
 from app.crud.elastic import ResourceType
-from app.crud.util import StatsNotFoundException
+from app.crud.util import StatsNotFoundException, build_portal_tree
 from app.models.collection import (
     CollectionAttribute,
     CollectionMaterialsCount,
     PortalTreeNode,
+    Collection,
 )
 from app.models.oeh_validation import MaterialFieldValidation
 from app.models.stats import (
@@ -213,17 +215,20 @@ async def read_stats(
     postgres: Postgres = Depends(get_postgres),
 ):
     async with postgres.pool.acquire() as conn:
-        row = await crud_stats.read_stats(
+        stats = await stats_latest(
             conn=conn, stat_type=StatType.MATERIAL_TYPES, noderef_id=noderef_id
         )
 
-    if not row:
+    if not stats:
         raise StatsNotFoundException
 
-    if not isinstance(row["stats"], dict):
-        row["stats"] = json.loads(row["stats"])
-
-    return StatsResponse(derived_at=row["derived_at"], stats=row["stats"])
+    return StatsResponse(
+        derived_at=datetime.fromtimestamp(0),
+        stats={
+            str(stat["collection_id"]): {"material_types": stat["counts"]}
+            for stat in stats
+        },
+    )
 
 
 @router.get(
@@ -240,40 +245,31 @@ async def read_stats_validation(
     postgres: Postgres = Depends(get_postgres),
 ):
     async with postgres.pool.acquire() as conn:
-        row = await crud_stats.read_stats(
+        stats = await stats_latest(
             conn=conn, stat_type=StatType.VALIDATION_MATERIALS, noderef_id=noderef_id
         )
 
-    if not row:
+    if not stats:
         raise StatsNotFoundException
-
-    if not isinstance(row["stats"], list):
-        row["stats"] = json.loads(row["stats"])
 
     response = [
         ValidationStatsResponse[MaterialValidationStats](
-            noderef_id=stat["noderef_id"],
+            noderef_id=stat["collection_id"],
             validation_stats=MaterialValidationStats(
-                title=MaterialFieldValidation(missing=stat["missing_title"]),
-                keywords=MaterialFieldValidation(missing=stat["missing_keywords"]),
-                subjects=MaterialFieldValidation(missing=stat["missing_subjects"]),
-                description=MaterialFieldValidation(
-                    missing=stat["missing_description"]
-                ),
-                license=MaterialFieldValidation(missing=stat["missing_license"]),
-                edu_context=MaterialFieldValidation(missing=stat["missing_edu_context"]),
-                ads_qualifier=MaterialFieldValidation(
-                    missing=stat["missing_ads_qualifier"]
-                ),
+                title=MaterialFieldValidation(missing=stat["title"]),
+                keywords=MaterialFieldValidation(missing=stat["keywords"]),
+                subjects=MaterialFieldValidation(missing=stat["taxon_id"]),
+                description=MaterialFieldValidation(missing=stat["description"]),
+                license=MaterialFieldValidation(missing=stat["license"]),
+                edu_context=MaterialFieldValidation(missing=stat["edu_context"]),
+                ads_qualifier=MaterialFieldValidation(missing=stat["ads_qualifier"]),
                 material_type=MaterialFieldValidation(
-                    missing=stat["missing_material_type"]
+                    missing=stat["learning_resource_type"]
                 ),
-                object_type=MaterialFieldValidation(
-                    missing=stat["missing_object_type"]
-                ),
+                object_type=MaterialFieldValidation(missing=stat["object_type"]),
             ),
         )
-        for stat in row["stats"]
+        for stat in stats
     ]
 
     return response
@@ -293,27 +289,21 @@ async def read_stats_validation_collection(
     postgres: Postgres = Depends(get_postgres),
 ):
     async with postgres.pool.acquire() as conn:
-        row = await crud_stats.read_stats(
+        stats = await stats_latest(
             conn=conn, stat_type=StatType.VALIDATION_COLLECTIONS, noderef_id=noderef_id
         )
 
-    if not row:
+    if not stats:
         raise StatsNotFoundException
-
-    if not isinstance(row["stats"], list):
-        row["stats"] = json.loads(row["stats"])
 
     response = [
         ValidationStatsResponse[CollectionValidationStats](
-            noderef_id=stat["noderef_id"],
+            noderef_id=stat["collection_id"],
             validation_stats=CollectionValidationStats(
-                title=stat["title"],
-                keywords=stat["keywords"],
-                description=stat["description"],
-                edu_context=stat["edu_context"],
+                **{k: ["missing"] for k in stat["missing_fields"]}
             ),
         )
-        for stat in row["stats"]
+        for stat in stats
     ]
 
     return response
@@ -332,16 +322,13 @@ async def read_stats_portal_tree(
     postgres: Postgres = Depends(get_postgres),
 ):
     async with postgres.pool.acquire() as conn:
-        row = await crud_stats.read_stats(
+        stats = await stats_latest(
             conn=conn, stat_type=StatType.PORTAL_TREE, noderef_id=noderef_id
         )
 
-    if not row:
+    if not stats:
         raise StatsNotFoundException
 
-    if not isinstance(row["stats"], list):
-        row["stats"] = json.loads(row["stats"])
-
-    response = [PortalTreeNode.construct(**node) for node in row["stats"]]
-
-    return response
+    return await build_portal_tree(
+        collections=[Collection(**c) for c in stats], root_noderef_id=noderef_id
+    )

@@ -1,25 +1,104 @@
+from pprint import pformat
+from typing import (
+    Dict,
+    List,
+)
 from uuid import UUID
 
-from asyncpg import (
-    Connection,
-    Record,
-)
+from asyncpg import Connection
 
+from app.core.config import DEBUG
+from app.core.logging import logger
 from app.models.stats import StatType
-from .metadata import Stats
-from .pg_utils import compile_query
 
 
 async def stats_latest(
     conn: Connection, stat_type: StatType, noderef_id: UUID
-) -> Record:
-    query = (
-        Stats.select()
-        .where(Stats.c.noderef_id == noderef_id)
-        .where(Stats.c.stat_type == stat_type.value)
-    )
+) -> List[Dict]:
+    results = []
 
-    query = query.order_by(Stats.c.derived_at.desc()).limit(1)
+    if stat_type is StatType.MATERIAL_TYPES:
 
-    compiled_query, params, _ = compile_query(query)
-    return await conn.fetchrow(compiled_query, *params)
+        results = await conn.fetch(
+            """
+            with counts as (
+
+                select counts.*
+                from analytics.material_counts_by_learning_resource_type counts
+                         join analytics.collections c on c.id =  counts.collection_id
+                where c.portal_id = $1
+                order by c.portal_depth, c.id
+
+            ), agg as (
+
+                select counts.collection_id
+                     , jsonb_object_agg(counts.learning_resource_type::text, counts.count) counts
+                from counts
+                group by counts.collection_id
+            
+            )
+
+            select agg.collection_id
+                 , jsonb_set(agg.counts, '{total}', to_jsonb(mc.total)) counts
+            from agg
+                    join analytics.material_counts mc on mc.id = agg.collection_id
+            """,
+            noderef_id,
+        )
+
+    elif stat_type is StatType.VALIDATION_COLLECTIONS:
+
+        results = await conn.fetch(
+            """
+            with agg as (
+                 
+                select resource_id                    collection_id
+                     , array_agg(missing_field::text) missing_fields
+                from analytics.missing_fields
+                where resource_type = 'collection'
+                group by resource_id
+                
+            )
+            
+            select agg.*
+            from agg
+                    join analytics.collections c on c.id =  agg.collection_id
+            where c.portal_id = $1
+            order by c.portal_depth, c.id
+            """,
+            noderef_id,
+        )
+
+    elif stat_type is StatType.VALIDATION_MATERIALS:
+
+        results = await conn.fetch(
+            """
+            select counts.*
+            from analytics.material_counts_by_missing_field counts
+                    join analytics.collections c on c.id =  counts.collection_id
+            where c.portal_id = $1
+            order by c.portal_depth, c.id
+            """,
+            noderef_id,
+        )
+
+    elif stat_type is StatType.PORTAL_TREE:
+
+        results = await conn.fetch(
+            """
+            select c.id noderef_id
+                 , c.title
+                 , c.parent_id
+            from analytics.collections c
+            where c.portal_id = $1
+            order by c.portal_depth, c.parent_id
+            """,
+            noderef_id,
+        )
+
+    results = [dict(record) for record in results]
+
+    if DEBUG:
+        logger.debug(f"Read from postgres:\n{pformat(results)}")
+
+    return results

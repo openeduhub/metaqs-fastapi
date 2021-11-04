@@ -1,24 +1,17 @@
 # import asyncio
 from collections import defaultdict
-from pprint import pformat
-from typing import Union
 from uuid import UUID
 
-from asyncpg import Connection
 from elasticsearch_dsl.response import Response
 from glom import merge
 
 import app.crud.collection as crud_collection
-from app.core.config import DEBUG
 
 from app.elastic import Search
 from app.elastic.utils import (
     merge_agg_response,
     merge_composite_agg_response,
 )
-from app.models.stats import StatType
-from app.pg.queries import stats_latest
-from app.core.logging import logger
 from app.crud.elastic import ResourceType
 from .elastic import (
     agg_materials_by_collection,
@@ -111,15 +104,3 @@ async def run_stats_material_types(root_noderef_id: UUID) -> dict:
         }
 
     return stats
-
-
-async def read_stats(
-    conn: Connection, stat_type: StatType, noderef_id: UUID
-) -> Union[dict, None]:
-    row = await stats_latest(conn, stat_type, noderef_id)
-
-    if row:
-        if DEBUG:
-            logger.debug(f"Read from postgres:\n{pformat(dict(row))}")
-
-        return dict(row)
