@@ -17,22 +17,17 @@ depends_on = None
 
 def upgrade():
     conn = op.get_bind()
-    conn.execute("""
--- create extension if not exists ltree;
-
-create function update_timestamp()
-    returns trigger as
-$$
-begin
-    new.updated_at = now();
-    return new;
-end;
-$$ language 'plpgsql';
-""")
+    conn.execute(
+        """
+create schema if not exists analytics_raw;
+"""
+    )
 
 
 def downgrade():
     conn = op.get_bind()
-    conn.execute("""
-drop function update_timestamp;
-""")
+    conn.execute(
+        """
+drop schema if exists analytics_raw cascade;
+"""
+    )
