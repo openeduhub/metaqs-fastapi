@@ -1,1 +1,9 @@
-
+- https://github.com/tiangolo/uvicorn-gunicorn-fastapi-docker
+- https://magicstack.github.io/asyncpg/current/index.html
+- https://docs.sqlalchemy.org/en/14/tutorial/index.html
+- https://fastapi.tiangolo.com/tutorial/
+- https://pydantic-docs.helpmanual.io/
+- https://elasticsearch-dsl.readthedocs.io/en/latest/index.html
+- https://glom.readthedocs.io/en/latest/index.html
+- https://www.python-httpx.org/quickstart/
+- https://www.jsonrpcclient.com/en/stable/index.html
