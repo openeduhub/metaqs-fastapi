@@ -24,6 +24,7 @@ python-slugify = "^5.0.2"
 starlette-context = "^0.3.3"
 radon = "^5.1.0"
 httpx = {version = "^1.0.0*", allow-prereleases = true}
+jsonrpcclient = "^4.0.1"
 
 [tool.poetry.dev-dependencies]
 
