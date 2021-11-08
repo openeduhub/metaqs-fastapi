@@ -24,8 +24,8 @@ async def stats_latest(
             with counts as (
 
                 select counts.*
-                from analytics.material_counts_by_learning_resource_type counts
-                         join analytics.collections c on c.id =  counts.collection_id
+                from staging.material_counts_by_learning_resource_type counts
+                         join staging.collections c on c.id =  counts.collection_id
                 where c.portal_id = $1
                 order by c.portal_depth, c.id
 
@@ -41,7 +41,7 @@ async def stats_latest(
             select agg.collection_id
                  , jsonb_set(agg.counts, '{total}', to_jsonb(mc.total)) counts
             from agg
-                    join analytics.material_counts mc on mc.id = agg.collection_id
+                    join staging.material_counts mc using (collection_id)
             """,
             noderef_id,
         )
@@ -54,7 +54,7 @@ async def stats_latest(
                  
                 select resource_id                    collection_id
                      , array_agg(missing_field::text) missing_fields
-                from analytics.missing_fields
+                from staging.missing_fields
                 where resource_type = 'collection'
                 group by resource_id
                 
@@ -62,7 +62,7 @@ async def stats_latest(
             
             select agg.*
             from agg
-                    join analytics.collections c on c.id =  agg.collection_id
+                    join staging.collections c on c.id =  agg.collection_id
             where c.portal_id = $1
             order by c.portal_depth, c.id
             """,
@@ -74,8 +74,8 @@ async def stats_latest(
         results = await conn.fetch(
             """
             select counts.*
-            from analytics.material_counts_by_missing_field counts
-                    join analytics.collections c on c.id =  counts.collection_id
+            from staging.material_counts_by_missing_field counts
+                    join staging.collections c on c.id =  counts.collection_id
             where c.portal_id = $1
             order by c.portal_depth, c.id
             """,
@@ -86,12 +86,12 @@ async def stats_latest(
 
         results = await conn.fetch(
             """
-            select c.id noderef_id
+            select c.id                                                        noderef_id
                  , c.title
-                 , c.parent_id
-            from analytics.collections c
+                 , replace(ltree2text(subpath(c.path, -2, 1)), '_', '-')::uuid parent_id
+            from staging.collections c
             where c.portal_id = $1
-            order by c.portal_depth, c.parent_id
+            order by c.portal_depth, parent_id
             """,
             noderef_id,
         )

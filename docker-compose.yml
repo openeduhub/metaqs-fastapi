@@ -44,7 +44,7 @@ services:
       - LOG_LEVEL=info
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - POSTGRES_HOST=postgres
-      - POSTGRES_DB=oeh
+      - POSTGRES_DB=analytics
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - ELASTICSEARCH_URL=${ELASTICSEARCH_URL:-http://elasticsearch:9200}
@@ -82,7 +82,7 @@ services:
     container_name: postgres
     image: postgres:13
     environment:
-      - POSTGRES_DB=oeh
+      - POSTGRES_DB=analytics
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     networks: [ backend ]
