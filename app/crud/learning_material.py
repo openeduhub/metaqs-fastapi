@@ -1,3 +1,4 @@
+from random import randint
 from typing import (
     List,
     Optional,
@@ -5,6 +6,8 @@ from typing import (
 )
 from uuid import UUID
 
+from elasticsearch_dsl.function import RandomScore
+from elasticsearch_dsl.query import FunctionScore
 from elasticsearch_dsl.response import Response
 from glom import (
     glom,
@@ -82,6 +85,26 @@ async def get_many(
 
     if response.success():
         return [LearningMaterial.parse_elastic_hit(hit) for hit in response]
+
+
+async def get_random(
+    ancestor_id: Optional[UUID] = None,
+    source_fields: Optional[Set[LearningMaterialAttribute]] = None,
+) -> LearningMaterial:
+    s = Search().query(
+        FunctionScore(
+            query=query_materials(ancestor_id=ancestor_id),
+            functions=RandomScore(seed=randint(1, 2 ** 32 - 1), field="_seq_no"),
+            boost_mode="sum",
+        )
+    )
+
+    response = s.source(
+        source_fields if source_fields else LearningMaterial.source_fields
+    )[:1].execute()
+
+    if response.success():
+        return LearningMaterial.parse_elastic_hit(response.hits[0])
 
 
 async def material_count(ancestor_id: UUID) -> int:

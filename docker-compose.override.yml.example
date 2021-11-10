@@ -29,6 +29,10 @@ services:
     ports:
       - "5432:5432"
 
+  languagetool:
+    ports:
+      - "8010:8010"
+
   elasticsearch:
     ports:
       - "9200:9200"

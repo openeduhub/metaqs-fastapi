@@ -21,6 +21,7 @@ services:
 #      - redis
 #      - redisinsight
       - postgres
+      - languagetool
       - elasticsearch
 #      - kibana
     environment:
@@ -36,6 +37,7 @@ services:
     depends_on:
 #      - redis
       - postgres
+      - languagetool
       - elasticsearch
     environment:
       - API_KEY=${API_KEY}
@@ -88,6 +90,14 @@ services:
     networks: [ backend ]
     volumes:
       - pg-data:/var/lib/postgresql/data
+
+  languagetool:
+    container_name: languagetool
+    image: erikvl87/languagetool
+    environment:
+      - Java_Xms=512m
+      - Java_Xmx=2g
+    networks: [ backend ]
 
   elasticsearch:
     container_name: elasticsearch
