@@ -5,14 +5,14 @@ from fastapi import (
 )
 from starlette.status import HTTP_202_ACCEPTED
 
-import app.dbt_analytics.run as analytics
+import app.dbt_analytics.analytics as analytics
 from app.api.auth import authenticated
 
 router = APIRouter()
 
 
 @router.post(
-    "/run",
+    "/run-analytics",
     dependencies=[Security(authenticated)],
     status_code=HTTP_202_ACCEPTED,
     tags=["Analytics", "Authenticated"],
