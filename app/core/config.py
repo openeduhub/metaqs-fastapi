@@ -60,3 +60,5 @@ LANGUAGETOOL_ENABLED_CATEGORIES = [
     "TYPOS",
     "COMPOUNDING",
 ]
+
+DBT_URL = "http://dbt:8580/jsonrpc"
