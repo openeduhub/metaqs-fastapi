@@ -4,7 +4,12 @@ from typing import (
     Optional,
 )
 
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    validator,
+)
+
+from .util import none_to_zero
 
 
 class OehValidationError(str, Enum):
@@ -28,3 +33,6 @@ class MaterialFieldValidation(BaseModel):
     too_few: Optional[int]
     lacks_clarity: Optional[int]
     invalid_spelling: Optional[int]
+
+    # validators
+    _none_to_zero = validator("*", pre=True, allow_reuse=True)(none_to_zero)

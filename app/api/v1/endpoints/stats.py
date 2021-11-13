@@ -32,7 +32,10 @@ from app.models.collection import (
     PortalTreeNode,
     Collection,
 )
-from app.models.oeh_validation import MaterialFieldValidation
+from app.models.oeh_validation import (
+    MaterialFieldValidation,
+    OehValidationError,
+)
 from app.models.stats import (
     CollectionValidationStats,
     MaterialValidationStats,
@@ -300,7 +303,7 @@ async def read_stats_validation_collection(
         ValidationStatsResponse[CollectionValidationStats](
             noderef_id=stat["collection_id"],
             validation_stats=CollectionValidationStats(
-                **{k: ["missing"] for k in stat["missing_fields"]}
+                **{k: [OehValidationError.MISSING] for k in stat["missing_fields"]}
             ),
         )
         for stat in stats
