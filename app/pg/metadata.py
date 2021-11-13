@@ -1,61 +1,34 @@
-from sqlalchemy import (
-    Column,
-    ForeignKey,
-    MetaData,
-    Table,
-)
-from sqlalchemy.dialects.postgresql import (
-    JSONB,
-    TIMESTAMP,
-    UUID,
-)
+import sqlalchemy as sa
 from sqlalchemy.orm import declarative_base
 
-metadata = MetaData(schema="analytics_raw")
-Base = declarative_base(metadata=metadata)
+from app.core.config import DATABASE_URL
 
-
-collections = Table(
-    "collections",
-    Base.metadata,
-    Column("id", UUID, primary_key=True),
-    Column("doc", JSONB, nullable=False),
-    Column("derived_at", TIMESTAMP, nullable=False),
-)
-
-
-materials = Table(
-    "materials",
-    Base.metadata,
-    Column("id", UUID, primary_key=True),
-    Column("doc", JSONB, nullable=False),
-    Column("derived_at", TIMESTAMP, nullable=False),
-)
+engine = sa.create_engine(str(DATABASE_URL), future=True)
+Base = declarative_base()
 
 
 class Collection(Base):
-    __table__ = collections
+    __table__ = sa.Table(
+        "collections", Base.metadata, schema="raw", autoload_with=engine,
+    )
 
 
 class Material(Base):
-    __table__ = materials
+    __table__ = sa.Table(
+        "materials", Base.metadata, schema="raw", autoload_with=engine,
+    )
 
 
-# collection_material = Table(
-#     "collection_material",
-#     metadata,
-#     Column(
-#         "collection_id",
-#         UUID,
-#         ForeignKey("collections.id"),
-#         primary_key=True,
-#         nullable=False,
-#     ),
-#     Column(
-#         "material_id",
-#         UUID,
-#         ForeignKey("materials.id"),
-#         primary_key=True,
-#         nullable=False,
-#     ),
-# )
+class Spellcheck(Base):
+    __table__ = sa.Table(
+        "spellcheck", Base.metadata, schema="store", autoload_with=engine,
+    )
+
+
+spellcheck_queue = sa.Table(
+    "spellcheck_queue",
+    Base.metadata,
+    sa.PrimaryKeyConstraint("resource_id", "resource_field"),
+    schema="staging",
+    autoload_with=engine,
+)

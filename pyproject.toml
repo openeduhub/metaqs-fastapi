@@ -16,7 +16,6 @@ SQLAlchemy-Utils = "^0.37.8"
 databases = {extras = ["postgresql"], version = "^0.5.1"}
 asyncpg = "^0.24.0"
 psycopg2-binary = "^2.9.1"
-alembic = "^1.7.1"
 glom = "^20.11.0"
 more-itertools = "^8.8.0"
 aioredis = "^2.0.0"
