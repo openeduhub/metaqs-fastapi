@@ -9,6 +9,12 @@ def none_to_zero(v: int) -> Optional[int]:
     return v
 
 
+def none_to_empty_list(v: list) -> Optional[list]:
+    if v is None:
+        return []
+    return v
+
+
 def empty_to_none(v: str) -> Optional[str]:
     if v == "":
         return None
