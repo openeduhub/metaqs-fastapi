@@ -398,6 +398,14 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "polling2"
+version = "0.5.0"
+description = "Updated polling utility with many configurable options"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "psycopg2-binary"
 version = "2.9.1"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
@@ -666,7 +674,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "e1389ed2a0abfb8a73c451abe9bea25eac336caccc7c1436269e6178abb410fa"
+content-hash = "a164d642360c4e404ccba479385bf4b7164bf54fad3d00213a474c90585dec33"
 
 [metadata.files]
 aiohttp = [
@@ -1063,6 +1071,10 @@ multidict = [
     {file = "multidict-5.2.0-cp39-cp39-win32.whl", hash = "sha256:1c7976cd1c157fa7ba5456ae5d31ccdf1479680dc9b8d8aa28afabc370df42b8"},
     {file = "multidict-5.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:c9631c642e08b9fff1c6255487e62971d8b8e821808ddd013d8ac058087591ac"},
     {file = "multidict-5.2.0.tar.gz", hash = "sha256:0dd1c93edb444b33ba2274b66f63def8a327d607c6c790772f448a53b6ea59ce"},
+]
+polling2 = [
+    {file = "polling2-0.5.0-py2.py3-none-any.whl", hash = "sha256:ad86d56fbd7502f0856cac2d0109d595c18fa6c7fb12c88cee5e5d16c17286c1"},
+    {file = "polling2-0.5.0.tar.gz", hash = "sha256:90b7da82cf7adbb48029724d3546af93f21ab6e592ec37c8c4619aedd010e342"},
 ]
 psycopg2-binary = [
     {file = "psycopg2-binary-2.9.1.tar.gz", hash = "sha256:b0221ca5a9837e040ebf61f48899926b5783668b7807419e4adae8175a31f773"},
