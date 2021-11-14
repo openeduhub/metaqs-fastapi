@@ -1,15 +1,17 @@
 from enum import Enum
 from typing import (
     ClassVar,
+    List,
     Optional,
 )
+from uuid import UUID
 
 from pydantic import (
     BaseModel,
     validator,
 )
 
-from .util import none_to_zero
+from .util import none_to_empty_list
 
 
 class OehValidationError(str, Enum):
@@ -28,11 +30,11 @@ OehValidationError._lut = {
 
 
 class MaterialFieldValidation(BaseModel):
-    missing: Optional[int]
-    too_short: Optional[int]
-    too_few: Optional[int]
-    lacks_clarity: Optional[int]
-    invalid_spelling: Optional[int]
+    missing: Optional[List[UUID]]
+    too_short: Optional[List[UUID]]
+    too_few: Optional[List[UUID]]
+    lacks_clarity: Optional[List[UUID]]
+    invalid_spelling: Optional[List[UUID]]
 
     # validators
-    _none_to_zero = validator("*", pre=True, allow_reuse=True)(none_to_zero)
+    _none_to_empty_list = validator("*", pre=True, allow_reuse=True)(none_to_empty_list)

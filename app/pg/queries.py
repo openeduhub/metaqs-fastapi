@@ -74,22 +74,16 @@ async def stats_latest(
 
         results = await conn.fetch(
             """
+            with agg as (
+                select mm.collection_id
+                     , jsonb_object_agg(mm.missing_field, mm.material_ids) missing_fields
+                from staging.materials_by_missing_field mm
+                group by mm.collection_id
+            )
             select c.id as collection_id
-                 , counts.total
-                 , missing_counts.title
-                 , missing_counts.description
-                 , missing_counts.keywords
-                 , missing_counts.license
-                 , missing_counts.taxon_id
-                 , missing_counts.edu_context
-                 , missing_counts.learning_resource_type
-                 , missing_counts.ads_qualifier
-                 , missing_counts.object_type
+                 , coalesce(agg.missing_fields, '{}'::jsonb) missing_fields
             from staging.collections c
-                    left join staging.material_counts counts
-                        on counts.collection_id = c.id
-                    left join staging.material_counts_by_missing_field missing_counts
-                        on missing_counts.collection_id = c.id
+                     left join agg on agg.collection_id = c.id
             where c.portal_id = $1
             order by c.portal_depth, c.id
             """,

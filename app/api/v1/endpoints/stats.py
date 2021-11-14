@@ -259,17 +259,10 @@ async def read_stats_validation(
         ValidationStatsResponse[MaterialValidationStats](
             noderef_id=stat["collection_id"],
             validation_stats=MaterialValidationStats(
-                title=MaterialFieldValidation(missing=stat["title"]),
-                keywords=MaterialFieldValidation(missing=stat["keywords"]),
-                subjects=MaterialFieldValidation(missing=stat["taxon_id"]),
-                description=MaterialFieldValidation(missing=stat["description"]),
-                license=MaterialFieldValidation(missing=stat["license"]),
-                edu_context=MaterialFieldValidation(missing=stat["edu_context"]),
-                ads_qualifier=MaterialFieldValidation(missing=stat["ads_qualifier"]),
-                material_type=MaterialFieldValidation(
-                    missing=stat["learning_resource_type"]
-                ),
-                object_type=MaterialFieldValidation(missing=stat["object_type"]),
+                **{
+                    field: MaterialFieldValidation(missing=material_ids)
+                    for field, material_ids in stat["missing_fields"].items()
+                },
             ),
         )
         for stat in stats
