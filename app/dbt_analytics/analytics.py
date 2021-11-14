@@ -36,7 +36,11 @@ def run():
 
     logger.info(f"Finished analytics import at: {datetime.now()}")
 
-    dbt.run_analytics()
+    result = dbt.run_analytics()
+    logger.info(f"Analytics: run started {result}")
+
+    result = dbt.poll(request_token=result["request_token"])
+    logger.info(f"Analytics: run took: {result.get('elapsed')}")
 
 
 def _backup_previous_run(session: Session):
