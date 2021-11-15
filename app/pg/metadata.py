@@ -19,16 +19,19 @@ class Material(Base):
     )
 
 
-class Spellcheck(Base):
-    __table__ = sa.Table(
-        "spellcheck", Base.metadata, schema="store", autoload_with=engine,
-    )
-
-
 spellcheck_queue = sa.Table(
     "spellcheck_queue",
     Base.metadata,
     sa.PrimaryKeyConstraint("resource_id", "resource_field"),
     schema="staging",
+    autoload_with=engine,
+)
+
+
+spellcheck = sa.Table(
+    "spellcheck",
+    Base.metadata,
+    sa.PrimaryKeyConstraint("resource_id", "resource_field"),
+    schema="store",
     autoload_with=engine,
 )
