@@ -12,8 +12,17 @@ from app.core.config import DBT_URL
 from app.core.logging import logger
 
 
+_dbt_spellcheck_path = "models/spellcheck"
+
+
 def run_analytics():
-    return _send_rpc(method="cli_args", params={"cli": "run"})
+    cli_command = f"run --exclude path:{_dbt_spellcheck_path}"
+    return _send_rpc(method="cli_args", params={"cli": cli_command})
+
+
+def run_spellcheck():
+    cli_command = f"run --select path:{_dbt_spellcheck_path}"
+    return _send_rpc(method="cli_args", params={"cli": cli_command})
 
 
 def poll(request_token: str):

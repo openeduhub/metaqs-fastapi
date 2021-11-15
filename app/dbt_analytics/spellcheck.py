@@ -6,6 +6,7 @@ from pylanguagetool import api as languagetool
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+import app.dbt_analytics.rpc_client as dbt
 from app.core.config import (
     DATABASE_URL,
     LANGUAGETOOL_ENABLED_CATEGORIES,
@@ -64,6 +65,9 @@ def run():
         session.commit()
 
     logger.info(f"Spellcheck: processing finished at: {datetime.now()}")
+
+    result = dbt.run_spellcheck()
+    logger.info(f"Analytics: spellcheck run started {result}")
 
 
 def _spellcheck(text, lang="de-DE"):

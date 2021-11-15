@@ -10,6 +10,7 @@ from .resource_import import (
     import_collections,
     import_materials,
 )
+from .spellcheck import run as run_spellcheck_processor
 
 engine = create_engine(str(DATABASE_URL), future=True)
 
@@ -41,6 +42,8 @@ def run():
 
     result = dbt.poll(request_token=result["request_token"])
     logger.info(f"Analytics: run took: {result.get('elapsed')}")
+
+    run_spellcheck_processor()
 
 
 def _backup_previous_run(session: Session):
