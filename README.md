@@ -7,3 +7,4 @@
 - https://glom.readthedocs.io/en/latest/index.html
 - https://www.python-httpx.org/quickstart/
 - https://www.jsonrpcclient.com/en/stable/index.html
+- https://polling2.readthedocs.io/en/latest/index.html
