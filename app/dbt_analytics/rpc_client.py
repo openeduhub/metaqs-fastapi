@@ -18,7 +18,11 @@ def run_analytics():
 
 def poll(request_token: str):
     return polling2.poll(
-        partial(_send_rpc, method="poll", params={"request_token": request_token, "logs": False}),
+        partial(
+            _send_rpc,
+            method="poll",
+            params={"request_token": request_token, "logs": False},
+        ),
         check_success=lambda result: result.get("state") == "success",
         step=30,
         max_tries=10,
@@ -26,9 +30,7 @@ def poll(request_token: str):
 
 
 def _send_rpc(method: str, params: dict) -> dict:
-    response = http.post(
-        DBT_URL, json=request_uuid(method, params=params)
-    )
+    response = http.post(DBT_URL, json=request_uuid(method, params=params))
     parsed = parse(response.json())
     if not isinstance(parsed, Ok):
         logger.error(f"Error from dbt server: {parsed.message}")
