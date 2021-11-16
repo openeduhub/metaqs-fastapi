@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 import app.dbt_analytics.rpc_client as dbt
 from app.core.config import (
     DATABASE_URL,
+    DEBUG,
     LANGUAGETOOL_ENABLED_CATEGORIES,
     LANGUAGETOOL_URL,
 )
@@ -27,6 +28,9 @@ def run():
     with Session(engine) as session:
 
         rows = list(session.execute(sa.select(spellcheck_queue)))
+
+        if DEBUG:
+            rows = rows[:250]
 
         for i, row in enumerate(rows):
             response = _spellcheck(row.text_content)
