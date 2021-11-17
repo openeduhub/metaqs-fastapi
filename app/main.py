@@ -35,15 +35,12 @@ from app.pg.pg_utils import (
 from app.pg.postgres import Postgres
 
 description = """
-## Links
 
-### Exploratory analysis and result visualization
+* [**Dashboard** (Apache Superset)](http://141.5.104.94:8083/login/)
 
-* [**Apache Superset** (Visualization Dashboard)](http://141.5.104.94:8083/login/)
+## Project documentation
 
-### Further documentation
-
-* [**Data Build Tool (dbt)** (Data Processing pipelines in SQL)](http://141.5.104.94:8081/#!/overview)
+* [**Data processing in SQL** (dbt -- Data Build Tool)](http://141.5.104.94:8081/#!/overview)
 """
 
 fastapi_app = FastAPI(title=PROJECT_NAME, description=description, debug=DEBUG)
