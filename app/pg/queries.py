@@ -55,7 +55,7 @@ async def stats_latest(
                 select resource_id                    collection_id
                      , array_agg(missing_field::text) missing_fields
                 from staging.missing_fields
-                where resource_type = "COLLECTION"
+                where resource_type = 'COLLECTION'
                 group by resource_id
                 
             )
