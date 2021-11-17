@@ -260,7 +260,7 @@ async def read_stats_validation(
             noderef_id=stat["collection_id"],
             validation_stats=MaterialValidationStats(
                 **{
-                    field: MaterialFieldValidation(missing=material_ids)
+                    field.lower(): MaterialFieldValidation(missing=material_ids)
                     for field, material_ids in stat["missing_fields"].items()
                 },
             ),
@@ -296,7 +296,7 @@ async def read_stats_validation_collection(
         ValidationStatsResponse[CollectionValidationStats](
             noderef_id=stat["collection_id"],
             validation_stats=CollectionValidationStats(
-                **{k: [OehValidationError.MISSING] for k in stat["missing_fields"]}
+                **{k.lower(): [OehValidationError.MISSING] for k in stat["missing_fields"]}
             ),
         )
         for stat in stats
