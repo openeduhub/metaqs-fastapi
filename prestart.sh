@@ -1,1 +1,2 @@
-// placeholder, overrides prestart.sh from base image
+#!/bin/bash
+# empty placeholder, overrides prestart.sh from base image
