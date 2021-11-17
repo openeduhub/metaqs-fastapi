@@ -36,6 +36,10 @@ def run():
             response = _spellcheck(row.text_content)
 
             if "matches" in response and response["matches"]:
+
+                if DEBUG:
+                    logger.debug(f"Spellcheck: found error for row: {row}")
+
                 t = spellcheck
                 stmt = sapg.insert(t).values(
                     resource_id=row.resource_id,
