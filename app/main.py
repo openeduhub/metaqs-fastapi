@@ -34,7 +34,19 @@ from app.pg.pg_utils import (
 )
 from app.pg.postgres import Postgres
 
-fastapi_app = FastAPI(title=PROJECT_NAME, debug=DEBUG)
+description = """
+## Links
+
+### Exploratory analysis and result visualization
+
+* [**Apache Superset** (Visualization Dashboard)](http://141.5.104.94:8083/login/)
+
+### Further documentation
+
+* [**Data Build Tool (dbt)** (Data Processing pipelines in SQL)](http://141.5.104.94:8081/#!/overview)
+"""
+
+fastapi_app = FastAPI(title=PROJECT_NAME, description=description, debug=DEBUG)
 
 fastapi_app.add_middleware(RawContextMiddleware)
 
