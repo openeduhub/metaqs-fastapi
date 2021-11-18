@@ -29,6 +29,8 @@ def run():
 
         rows = list(session.execute(sa.select(spellcheck_queue)))
 
+        logger.debug(f"Spellcheck: {len(rows)} retrieved")
+
         if DEBUG:
             rows = rows[:250]
 
