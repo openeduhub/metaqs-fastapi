@@ -31,8 +31,8 @@ def run():
 
         logger.debug(f"Spellcheck: {len(rows)} retrieved")
 
-        if DEBUG:
-            rows = rows[:250]
+        # if DEBUG:
+        #     rows = rows[:250]
 
         for i, row in enumerate(rows):
             response = _spellcheck(row.text_content)
