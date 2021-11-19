@@ -83,7 +83,7 @@ def run():
 def _spellcheck(text, lang="de-DE"):
     response = languagetool.check(
         text,
-        api_url=LANGUAGETOOL_URL,
+        api_url=f"{LANGUAGETOOL_URL}/",
         lang=lang,
         enabled_categories=",".join(LANGUAGETOOL_ENABLED_CATEGORIES),
         enabled_only=True,
