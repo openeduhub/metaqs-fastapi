@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.9'
 
 volumes:
   fastapi-data:
@@ -28,12 +28,12 @@ services:
       - NGINX_HOST=localhost
     networks: [ frontend ]
     ports:
-      - "80:80"
+      - "${PORT}:80"
 
   fastapi:
     container_name: fastapi
     build: ./
-    image: metaqs-api-fastapi
+    image: metaqs-fastapi
     depends_on:
 #      - redis
       - postgres
