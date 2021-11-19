@@ -296,7 +296,10 @@ async def read_stats_validation_collection(
         ValidationStatsResponse[CollectionValidationStats](
             noderef_id=stat["collection_id"],
             validation_stats=CollectionValidationStats(
-                **{k.lower(): [OehValidationError.MISSING] for k in stat["missing_fields"]}
+                **{
+                    k.lower(): [OehValidationError.MISSING]
+                    for k in stat["missing_fields"]
+                }
             ),
         )
         for stat in stats
