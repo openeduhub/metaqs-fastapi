@@ -2,13 +2,12 @@ from datetime import datetime
 
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as sapg
+from fastapi_utils.tasks import repeat_every
 from pylanguagetool import api as languagetool
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
-import app.dbt_analytics.rpc_client as dbt
+import app.analytics.rpc_client as dbt
 from app.core.config import (
-    DATABASE_URL,
+    BACKGROUND_TASK_SPELLCHECK_INTERVAL,
     DEBUG,
     LANGUAGETOOL_ENABLED_CATEGORIES,
     LANGUAGETOOL_URL,
@@ -18,21 +17,21 @@ from app.pg.metadata import (
     spellcheck,
     spellcheck_queue,
 )
+from app.pg.util import get_postgres
 
-engine = create_engine(str(DATABASE_URL), future=True)
+
+@repeat_every(seconds=BACKGROUND_TASK_SPELLCHECK_INTERVAL, logger=logger)
+def background_task():
+    run()
 
 
 def run():
     logger.info(f"Spellcheck: starting processing at: {datetime.now()}")
 
-    with Session(engine) as session:
-
+    with next(get_postgres()) as session:
         rows = list(session.execute(sa.select(spellcheck_queue)))
 
         logger.debug(f"Spellcheck: {len(rows)} retrieved")
-
-        # if DEBUG:
-        #     rows = rows[:250]
 
         for i, row in enumerate(rows):
             response = _spellcheck(row.text_content)
@@ -76,8 +75,8 @@ def run():
 
     logger.info(f"Spellcheck: processing finished at: {datetime.now()}")
 
-    result = dbt.run_spellcheck()
-    logger.info(f"Analytics: spellcheck run started {result}")
+    # result = dbt.run_spellcheck()
+    # logger.info(f"Analytics: spellcheck run started {result}")
 
 
 def _spellcheck(text, lang="de-DE"):

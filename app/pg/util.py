@@ -1,8 +1,15 @@
 import json
+from functools import lru_cache
 from pprint import pformat
-from typing import Tuple
+from typing import (
+    Iterator,
+    Tuple,
+)
 
 import asyncpg
+from asyncpg.pool import Pool
+from fastapi_utils.session import FastAPISessionMaker
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.dialects.postgresql import pypostgresql
 
@@ -13,7 +20,6 @@ from app.core.config import (
     MIN_CONNECTIONS_COUNT,
 )
 from app.core.logging import logger
-from .postgres import postgres
 
 dialect = pypostgresql.dialect(paramstyle="pyformat")
 dialect.implicit_returning = True
@@ -24,10 +30,28 @@ dialect.supports_sane_multi_rowcount = True
 dialect._has_native_hstore = True
 
 
-async def get_postgres():
-    if not postgres.pool:
+def get_postgres() -> Iterator[Session]:
+    """ FastAPI dependency that provides a sqlalchemy session """
+    yield from _get_fastapi_sessionmaker().get_db()
+
+
+@lru_cache()
+def _get_fastapi_sessionmaker() -> FastAPISessionMaker:
+    return FastAPISessionMaker(str(DATABASE_URL))
+
+
+class AsyncPg:
+    pool: Pool = None
+
+
+_async_Pg = AsyncPg()
+
+
+async def get_postgres_async() -> Pool:
+    """ FastAPI dependency that provides a asyncpg connection """
+    if not _async_Pg.pool:
         await connect_to_postgres()
-    return postgres
+    return _async_Pg.pool
 
 
 async def connect_to_postgres():
@@ -36,7 +60,7 @@ async def connect_to_postgres():
             "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
         )
 
-    postgres.pool = await asyncpg.create_pool(
+    _async_Pg.pool = await asyncpg.create_pool(
         str(DATABASE_URL),
         min_size=MIN_CONNECTIONS_COUNT,
         max_size=MAX_CONNECTIONS_COUNT,
@@ -46,8 +70,8 @@ async def connect_to_postgres():
 
 
 async def close_postgres_connection():
-    if postgres.pool:
-        await postgres.pool.close()
+    if _async_Pg.pool:
+        await _async_Pg.pool.close()
 
 
 def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:

@@ -42,7 +42,7 @@ def swagger_spec(path: str = None):
 
 
 @router.get(
-    "/check/random-material", tags=["Spellcheck"],
+    "/check/random-material", tags=[],
 )
 async def spellcheck_random_material(*, http: AsyncClient = Depends(get_client)):
     material: LearningMaterial = await crud_material.get_random(
@@ -86,7 +86,7 @@ class CheckTextBody(BaseModel):
 
 @router.post(
     "/check",
-    tags=["Spellcheck"],
+    tags=["LanguageTool"],
     openapi_extra={
         "description": swagger_spec("paths./check.post.description"),
         "responses": {
@@ -111,7 +111,7 @@ async def check_text(*, body: CheckTextBody, http: AsyncClient = Depends(get_cli
 
 @router.get(
     "/languages",
-    tags=["Spellcheck"],
+    tags=["LanguageTool"],
     openapi_extra={
         "description": swagger_spec("paths./languages.get.summary"),
         "responses": {
@@ -136,7 +136,7 @@ async def list_supported_languages(*, http: AsyncClient = Depends(get_client)):
 
 @router.get(
     "/words",
-    tags=["Spellcheck"],
+    tags=["LanguageTool"],
     openapi_extra={
         "description": swagger_spec("paths./words.get.description"),
         "responses": {
@@ -152,13 +152,13 @@ async def list_supported_languages(*, http: AsyncClient = Depends(get_client)):
     },
 )
 async def list_words_in_dictionaries(*, http: AsyncClient = Depends(get_client)):
-    return {"Hello": "Spellcheck"}
+    return {"Sorry": "Not yet implemented!"}
 
 
 @router.post(
     "/words/add",
     dependencies=[Security(authenticated)],
-    tags=["Spellcheck", "Authenticated"],
+    tags=["LanguageTool", "Authenticated"],
     openapi_extra={
         "description": swagger_spec("paths./words/add.post.description"),
         "responses": {
@@ -176,13 +176,13 @@ async def list_words_in_dictionaries(*, http: AsyncClient = Depends(get_client))
     },
 )
 async def add_word_to_dictionary(*, http: AsyncClient = Depends(get_client)):
-    return {"Hello": "Spellcheck"}
+    return {"Sorry": "Not yet implemented!"}
 
 
 @router.post(
     "/words/delete",
     dependencies=[Security(authenticated)],
-    tags=["Spellcheck", "Authenticated"],
+    tags=["LanguageTool", "Authenticated"],
     openapi_extra={
         "description": swagger_spec("paths./words/delete.post.description"),
         "responses": {
@@ -200,4 +200,4 @@ async def add_word_to_dictionary(*, http: AsyncClient = Depends(get_client)):
     },
 )
 async def delete_word_from_dictionary(*, http: AsyncClient = Depends(get_client)):
-    return {"Hello": "Spellcheck"}
+    return {"Sorry": "Not yet implemented!"}

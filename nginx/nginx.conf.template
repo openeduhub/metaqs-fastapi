@@ -14,7 +14,9 @@ server {
 
   keepalive_timeout   70;
 
-  location    / {
+  location /api/${API_VERSION} {
+
+    rewrite /api/${API_VERSION}/(.*) /$1 break;
 
     gzip on;
     gzip_min_length  1100;

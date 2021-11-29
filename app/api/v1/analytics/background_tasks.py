@@ -5,8 +5,9 @@ from fastapi import (
 )
 from starlette.status import HTTP_202_ACCEPTED
 
-import app.dbt_analytics.analytics as analytics
-import app.dbt_analytics.spellcheck as spellcheck
+import app.analytics.analytics as analytics
+import app.analytics.search_stats as search_stats
+import app.analytics.spellcheck as spellcheck
 from app.api.auth import authenticated
 
 router = APIRouter()
@@ -16,7 +17,7 @@ router = APIRouter()
     "/run-analytics",
     dependencies=[Security(authenticated)],
     status_code=HTTP_202_ACCEPTED,
-    tags=["Analytics", "Authenticated"],
+    tags=["Background Tasks", "Authenticated"],
 )
 async def run_analytics(*, background_tasks: BackgroundTasks):
     background_tasks.add_task(analytics.run)
@@ -26,7 +27,17 @@ async def run_analytics(*, background_tasks: BackgroundTasks):
     "/run-spellcheck",
     dependencies=[Security(authenticated)],
     status_code=HTTP_202_ACCEPTED,
-    tags=["Analytics", "Authenticated"],
+    tags=["Background Tasks", "Authenticated"],
 )
 async def run_spellcheck(*, background_tasks: BackgroundTasks):
     background_tasks.add_task(spellcheck.run)
+
+
+@router.post(
+    "/run-search-stats",
+    dependencies=[Security(authenticated)],
+    status_code=HTTP_202_ACCEPTED,
+    tags=["Background Tasks", "Authenticated"],
+)
+async def run_search_stats(*, background_tasks: BackgroundTasks):
+    background_tasks.add_task(search_stats.run)

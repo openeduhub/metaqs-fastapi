@@ -1,8 +1,4 @@
-from fastapi import (
-    Depends,
-    FastAPI,
-    Security,
-)
+from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
@@ -10,11 +6,17 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 from starlette_context.middleware import RawContextMiddleware
 
-from app.api import router as api_router
-from app.api.auth import authenticated
+import app.api as api
+from app.analytics.analytics import background_task as analytics_background_task
+from app.analytics.search_stats import background_task as search_stats_background_task
+from app.analytics.spellcheck import background_task as spellcheck_background_task
+from app.api.languagetool import router as languagetool_router
 from app.core.config import (
     ALLOWED_HOSTS,
     API_VERSION,
+    BACKGROUND_TASK_ANALYTICS_INTERVAL,
+    BACKGROUND_TASK_SEARCH_STATS_INTERVAL,
+    BACKGROUND_TASK_SPELLCHECK_INTERVAL,
     DEBUG,
     LOG_LEVEL,
     PROJECT_NAME,
@@ -28,32 +30,17 @@ from app.elastic.utils import (
     connect_to_elastic,
 )
 from app.http import close_client
-from app.pg.pg_utils import (
-    get_postgres,
-    close_postgres_connection,
+
+fastapi_app = FastAPI(
+    root_path=f"/api/{API_VERSION}",
+    title=f"{PROJECT_NAME} API",
+    description=f"""
+* [**Analytics API**](/api/{API_VERSION}/analytics/docs)
+* [**LanguageTool API**](/api/{API_VERSION}/languagetool/docs)
+    """,
+    version=API_VERSION,
+    debug=DEBUG,
 )
-from app.pg.postgres import Postgres
-
-description = """
-
-* [**Dashboard** (Apache Superset)](http://141.5.104.94:8083/login/)
-
-## Project documentation
-
-* [**Data processing in SQL** (dbt -- Data Build Tool)](http://141.5.104.94:8081/#!/overview)
-"""
-
-fastapi_app = FastAPI(title=PROJECT_NAME, description=description, debug=DEBUG)
-
-fastapi_app.add_middleware(RawContextMiddleware)
-
-fastapi_app.add_event_handler("startup", connect_to_elastic)
-fastapi_app.add_event_handler("shutdown", close_elastic_connection)
-fastapi_app.add_event_handler("shutdown", close_postgres_connection)
-fastapi_app.add_event_handler("shutdown", close_client)
-
-fastapi_app.add_exception_handler(HTTPException, http_error_handler)
-fastapi_app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
 
 
 class Ping(BaseModel):
@@ -72,24 +59,51 @@ async def ping_api():
     return {"status": "ok"}
 
 
-@fastapi_app.get(
-    "/pg-version",
-    response_model=dict,
-    dependencies=[Security(authenticated)],
-    tags=["Authenticated"],
+fastapi_app.include_router(api.real_time_router, prefix=f"/real-time")
+
+analytics_app = FastAPI(
+    title=f"{PROJECT_NAME} Analytics API",
+    description=f"""
+* [**Real-Time API**](/api/{API_VERSION}/docs)
+* [**LanguageTool API**](/api/{API_VERSION}/languagetool/docs)
+    """,
+    version=API_VERSION,
+    debug=DEBUG,
 )
-async def pg_version(postgres: Postgres = Depends(get_postgres),):
-    async with postgres.pool.acquire() as conn:
-        version = await conn.fetchval("select version()")
-        return {"version": version}
+analytics_app.include_router(api.analytics_router)
+fastapi_app.mount(path="/analytics", app=analytics_app)
 
-
-fastapi_app.include_router(api_router, prefix=f"/api/{API_VERSION}")
+languagetool_app = FastAPI(
+    title=f"{PROJECT_NAME} LanguageTool API",
+    description=f"""
+* [**Real-Time API**](/api/{API_VERSION}/docs)
+* [**Analytics API**](/api/{API_VERSION}/analytics/docs)
+    """,
+    debug=DEBUG,
+)
+languagetool_app.include_router(languagetool_router)
+fastapi_app.mount(path="/languagetool", app=languagetool_app)
 
 for route in fastapi_app.routes:
     if isinstance(route, APIRoute):
         route.operation_id = route.name
 
+fastapi_app.add_middleware(RawContextMiddleware)
+
+fastapi_app.add_event_handler("startup", connect_to_elastic)
+fastapi_app.add_event_handler("shutdown", close_elastic_connection)
+
+if BACKGROUND_TASK_ANALYTICS_INTERVAL:
+    fastapi_app.add_event_handler("startup", analytics_background_task)
+if BACKGROUND_TASK_SEARCH_STATS_INTERVAL:
+    fastapi_app.add_event_handler("startup", search_stats_background_task)
+if BACKGROUND_TASK_SPELLCHECK_INTERVAL:
+    fastapi_app.add_event_handler("startup", spellcheck_background_task)
+
+fastapi_app.add_exception_handler(HTTPException, http_error_handler)
+fastapi_app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
+
+fastapi_app.add_event_handler("shutdown", close_client)
 
 app = CORSMiddleware(
     app=fastapi_app,

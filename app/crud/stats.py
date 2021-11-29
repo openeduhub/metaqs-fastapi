@@ -5,8 +5,6 @@ from uuid import UUID
 from elasticsearch_dsl.response import Response
 from glom import merge
 
-import app.crud.collection as crud_collection
-
 from app.elastic import Search
 from app.elastic.utils import (
     merge_agg_response,
@@ -79,7 +77,7 @@ async def material_counts_by_type(root_noderef_id: UUID) -> dict:
         return stats
 
 
-async def search_hits_by_material_type(query_string: str) -> dict:
+def search_hits_by_material_type(query_string: str) -> dict:
     s = Search().query(query_materials()).query(search_materials(query_string))
     s.aggs.bucket("material_types", agg_material_types())
 
@@ -89,18 +87,3 @@ async def search_hits_by_material_type(query_string: str) -> dict:
         stats = merge_agg_response(response.aggregations.material_types)
         stats["total"] = sum(stats.values())
         return stats
-
-
-async def run_stats_material_types(root_noderef_id: UUID) -> dict:
-    portals = await crud_collection.get_many_sorted(root_noderef_id=root_noderef_id)
-    material_counts = await material_counts_by_type(root_noderef_id=root_noderef_id)
-
-    # TODO: refactor algorithm
-    stats = {}
-    for portal in portals:
-        stats[str(portal.noderef_id)] = {
-            "search": await search_hits_by_material_type(portal.title),
-            "material_types": material_counts.get(str(portal.noderef_id), {}),
-        }
-
-    return stats

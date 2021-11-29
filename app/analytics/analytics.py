@@ -1,18 +1,21 @@
 from datetime import datetime
 
-from sqlalchemy import create_engine
+from fastapi_utils.tasks import repeat_every
 from sqlalchemy.orm import Session
 
-import app.dbt_analytics.rpc_client as dbt
-from app.core.config import DATABASE_URL
+import app.analytics.rpc_client as dbt
+from app.core.config import BACKGROUND_TASK_ANALYTICS_INTERVAL
 from app.core.logging import logger
+from app.pg.util import get_postgres
 from .resource_import import (
     import_collections,
     import_materials,
 )
-from .spellcheck import run as run_spellcheck_processor
 
-engine = create_engine(str(DATABASE_URL), future=True)
+
+@repeat_every(seconds=BACKGROUND_TASK_ANALYTICS_INTERVAL, logger=logger)
+def background_task():
+    run()
 
 
 def run():
@@ -20,7 +23,7 @@ def run():
 
     logger.info(f"Starting analytics import at: {derived_at}")
 
-    with Session(engine) as session:
+    with next(get_postgres()) as session:
         _backup_previous_run(session)
 
         import_collections(session=session, derived_at=derived_at)
@@ -37,13 +40,11 @@ def run():
 
     logger.info(f"Finished analytics import at: {datetime.now()}")
 
-    result = dbt.run_analytics()
-    logger.info(f"Analytics: run started {result}")
-
-    result = dbt.poll(request_token=result["request_token"])
-    logger.info(f"Analytics: run took: {result.get('elapsed')}")
-
-    run_spellcheck_processor()
+    # result = dbt.run_analytics()
+    # logger.info(f"Analytics: run started {result}")
+    #
+    # result = dbt.poll(request_token=result["request_token"])
+    # logger.info(f"Analytics: run took: {result.get('elapsed')}")
 
 
 def _backup_previous_run(session: Session):
