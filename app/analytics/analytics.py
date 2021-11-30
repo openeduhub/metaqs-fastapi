@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 from fastapi_utils.tasks import repeat_every
@@ -21,7 +22,7 @@ def background_task():
 def run():
     derived_at = datetime.now()
 
-    logger.info(f"Starting analytics import at: {derived_at}")
+    logger.info(f"{os.getpid()}: Starting analytics import at: {derived_at}")
 
     with next(get_postgres()) as session:
         _backup_previous_run(session)
