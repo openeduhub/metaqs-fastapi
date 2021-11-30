@@ -21,7 +21,13 @@ def import_collections(session: Session, derived_at: datetime):
         .source(includes=["type", "aspects", "properties.*", "nodeRef.*", "path"])
     )
 
+    seen = set()
     for hit in s.scan():
+        if hit.nodeRef["id"] in seen:
+            continue
+
+        seen.add(hit.nodeRef["id"])
+
         session.add(
             Collection(id=hit.nodeRef["id"], doc=hit.to_dict(), derived_at=derived_at)
         )
@@ -42,7 +48,13 @@ def import_materials(session: Session, derived_at: datetime):
         )
     )
 
+    seen = set()
     for hit in s.scan():
+        if hit.nodeRef["id"] in seen:
+            continue
+
+        seen.add(hit.nodeRef["id"])
+
         session.add(
             Material(id=hit.nodeRef["id"], doc=hit.to_dict(), derived_at=derived_at)
         )
