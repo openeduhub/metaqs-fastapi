@@ -31,12 +31,13 @@ from app.elastic.utils import (
 )
 from app.http import close_client
 
+_root_path = f"/metaqs-api/{API_VERSION}"
 fastapi_app = FastAPI(
-    root_path=f"/api/{API_VERSION}",
+    root_path=_root_path,
     title=f"{PROJECT_NAME} API",
     description=f"""
-* [**Analytics API**](/api/{API_VERSION}/analytics/docs)
-* [**LanguageTool API**](/api/{API_VERSION}/languagetool/docs)
+* [**Analytics API**]({_root_path}/analytics/docs)
+* [**LanguageTool API**]({_root_path}/languagetool/docs)
     """,
     version=API_VERSION,
     debug=DEBUG,
@@ -64,8 +65,8 @@ fastapi_app.include_router(api.real_time_router, prefix=f"/real-time")
 analytics_app = FastAPI(
     title=f"{PROJECT_NAME} Analytics API",
     description=f"""
-* [**Real-Time API**](/api/{API_VERSION}/docs)
-* [**LanguageTool API**](/api/{API_VERSION}/languagetool/docs)
+* [**Real-Time API**]({_root_path}/docs)
+* [**LanguageTool API**]({_root_path}/languagetool/docs)
     """,
     version=API_VERSION,
     debug=DEBUG,
@@ -76,8 +77,8 @@ fastapi_app.mount(path="/analytics", app=analytics_app)
 languagetool_app = FastAPI(
     title=f"{PROJECT_NAME} LanguageTool API",
     description=f"""
-* [**Real-Time API**](/api/{API_VERSION}/docs)
-* [**Analytics API**](/api/{API_VERSION}/analytics/docs)
+* [**Real-Time API**]({_root_path}/docs)
+* [**Analytics API**]({_root_path}/analytics/docs)
     """,
     debug=DEBUG,
 )
