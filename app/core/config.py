@@ -3,6 +3,7 @@ import os
 from databases import DatabaseURL
 from starlette.datastructures import CommaSeparatedStrings
 
+ROOT_PATH = os.getenv("ROOT_PATH", "")
 API_KEY = os.getenv("API_KEY")
 API_KEY_NAME = "X-API-KEY"
 ALLOWED_HOSTS = CommaSeparatedStrings(os.getenv("ALLOWED_HOSTS", "*"))
