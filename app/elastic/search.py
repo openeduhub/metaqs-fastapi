@@ -2,6 +2,7 @@ from pprint import pformat
 
 from elasticsearch_dsl import Search as ElasticSearch
 from starlette_context import context
+from starlette_context.errors import ContextDoesNotExistError
 
 from app.core.config import (
     DEBUG,
@@ -38,8 +39,11 @@ class Search(ElasticSearch):
                 f"Response received from elastic:\n{pformat(response.to_dict())}"
             )
 
-        context["elastic_queries"] = context.get("elastic_queries", []) + [
-            {"query": self.to_dict(), "response": response.to_dict()}
-        ]
+        try:
+            context["elastic_queries"] = context.get("elastic_queries", []) + [
+                {"query": self.to_dict(), "response": response.to_dict()}
+            ]
+        except ContextDoesNotExistError:
+            pass
 
         return response
