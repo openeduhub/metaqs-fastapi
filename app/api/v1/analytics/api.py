@@ -27,6 +27,7 @@ async def pg_version(pool: Pool = Depends(get_postgres_async),):
         version = await conn.fetchval("select version()")
         return {"version": version}
 
+
 router.include_router(analytics_router)
 router.include_router(background_tasks_router)
 
