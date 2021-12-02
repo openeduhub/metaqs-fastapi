@@ -21,7 +21,7 @@ BACKGROUND_TASK_SPELLCHECK_INTERVAL = int(
 )
 # sleep delay between subsequent search stats requests against elastic, default 500ms
 BACKGROUND_TASK_SEARCH_STATS_SLEEP_INTERVAL = int(
-    os.getenv("BACKGROUND_TASK_SEARCH_STATS_SLEEP_INTERVAL", 0.5)
+    os.getenv("BACKGROUND_TASK_SEARCH_STATS_SLEEP_INTERVAL", 0)
 )
 
 DBT_URL = "http://dbt:8580/jsonrpc"

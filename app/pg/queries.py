@@ -17,17 +17,43 @@ async def stats_latest(
 ) -> List[Dict]:
     results = []
 
-    if stat_type is StatType.MATERIAL_TYPES:
+    if stat_type is StatType.SEARCH:
 
         results = await conn.fetch(
             """
-            with counts as (
+            with collections as (
+            
+                select id
+                from staging.collections
+                where portal_id = $1
+                
+            )
+
+            select stats.resource_id collection_id
+                 , stats.stats
+            from store.search_stats stats
+                join collections c on c.id = stats.resource_id
+            where resource_type = 'COLLECTION'
+                and resource_field = 'TITLE'
+            """,
+            noderef_id,
+        )
+
+    elif stat_type is StatType.MATERIAL_TYPES:
+
+        results = await conn.fetch(
+            """
+            with collections as (
+                
+                select id
+                from staging.collections
+                where portal_id = $1
+                
+            ), counts as (
 
                 select counts.*
                 from staging.material_counts_by_learning_resource_type counts
-                         join staging.collections c on c.id =  counts.collection_id
-                where c.portal_id = $1
-                order by c.portal_depth, c.id
+                         join collections c on c.id =  counts.collection_id
 
             ), agg as (
 
@@ -38,10 +64,15 @@ async def stats_latest(
             
             )
 
-            select agg.collection_id
-                 , jsonb_set(agg.counts, '{total}', to_jsonb(mc.total)) counts
-            from agg
-                    join staging.material_counts mc using (collection_id)
+            select c.id collection_id
+                 , case
+                        when agg.counts is not null
+                            then jsonb_set(agg.counts, '{total}', to_jsonb(mc.total))
+                        else jsonb_build_object('total', mc.total)
+                   end counts
+            from collections c
+                join staging.material_counts mc on mc.collection_id = c.id
+                left join agg on agg.collection_id = c.id
             """,
             noderef_id,
         )

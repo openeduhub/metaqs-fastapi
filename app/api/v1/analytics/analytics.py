@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from typing import List
 from uuid import UUID
@@ -48,20 +49,29 @@ async def read_stats(
     pool: Pool = Depends(get_postgres_async),
 ):
     async with pool.acquire() as conn:
-        stats = await stats_latest(
+        search_stats = await stats_latest(
+            conn=conn, stat_type=StatType.SEARCH, noderef_id=noderef_id
+        )
+
+        if not search_stats:
+            raise StatsNotFoundException
+
+        material_types_stats = await stats_latest(
             conn=conn, stat_type=StatType.MATERIAL_TYPES, noderef_id=noderef_id
         )
 
-    if not stats:
-        raise StatsNotFoundException
+        if not material_types_stats:
+            raise StatsNotFoundException
 
-    return StatsResponse(
-        derived_at=datetime.fromtimestamp(0),
-        stats={
-            str(stat["collection_id"]): {"material_types": stat["counts"]}
-            for stat in stats
-        },
-    )
+    stats = defaultdict(dict)
+
+    for stat in search_stats:
+        stats[str(stat["collection_id"])]["search"] = stat["stats"]
+
+    for stat in material_types_stats:
+        stats[str(stat["collection_id"])]["material_types"] = stat["counts"]
+
+    return StatsResponse(derived_at=datetime.fromtimestamp(0), stats=stats,)
 
 
 @router.get(
