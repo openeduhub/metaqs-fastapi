@@ -41,11 +41,11 @@ class _LearningMaterialAttribute(Field):
     COLLECTION_PATH = ("collections.path", FieldType.TEXT)
     CONTENT_FULLTEXT = ("content.fulltext", FieldType.TEXT)
     LEARNINGRESOURCE_TYPE = (
-        "properties.ccm:educationallearningresourcetype",
+        "properties.ccm:oeh_lrt_aggregated",
         FieldType.TEXT,
     )
     LEARNINGRESOURCE_TYPE_DE = (
-        "i18n.de_DE.ccm:educationallearningresourcetype",
+        "i18n.de_DE.ccm:oeh_lrt_aggregated",
         FieldType.TEXT,
     )
     EDUENDUSERROLE_DE = (
