@@ -4,3 +4,4 @@ docker-compose.override.yml
 .idea/
 __pycache__/
 .ipynb_checkpoints/
+local_tools/
