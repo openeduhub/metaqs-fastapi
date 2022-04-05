@@ -71,6 +71,7 @@ async def close_postgres_connection():
         await _async_Pg.pool.close()
 
 
+# TODO: Unused
 def compile_query(query: ClauseElement) -> Tuple[str, list, tuple]:
     compiled = query.compile(dialect=dialect)
     compiled_params = sorted(compiled.params.items())
