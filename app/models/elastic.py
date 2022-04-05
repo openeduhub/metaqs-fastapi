@@ -1,27 +1,13 @@
-from typing import (
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
-    TypeVar,
-)
+from typing import ClassVar, Dict, List, Optional, Type, TypeVar
 from uuid import UUID
 
 from elasticsearch_dsl.response import Response
-from pydantic import (
-    BaseModel as PydanticBaseModel,
-    Extra,
-)
-from glom import (
-    glom,
-    Coalesce,
-)
+from glom import Coalesce, glom
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Extra
 
-from app.elastic.fields import (
-    Field,
-    FieldType,
-)
+from app.elastic.fields import Field, FieldType
+
 from .base import BaseModel
 from .util import EmptyStrToNone
 
@@ -64,7 +50,10 @@ class ElasticResource(BaseModel):
         pass
 
     @classmethod
-    def parse_elastic_hit_to_dict(cls: Type[_ELASTIC_RESOURCE], hit: Dict,) -> dict:
+    def parse_elastic_hit_to_dict(
+        cls: Type[_ELASTIC_RESOURCE],
+        hit: Dict,
+    ) -> dict:
         spec = {
             "noderef_id": ElasticResourceAttribute.NODEREF_ID.path,
             "type": Coalesce(ElasticResourceAttribute.TYPE.path, default=None),
@@ -74,7 +63,8 @@ class ElasticResource(BaseModel):
 
     @classmethod
     def parse_elastic_hit(
-        cls: Type[_ELASTIC_RESOURCE], hit: Dict,
+        cls: Type[_ELASTIC_RESOURCE],
+        hit: Dict,
     ) -> _ELASTIC_RESOURCE:
         return cls.construct(**cls.parse_elastic_hit_to_dict(hit))
 
@@ -96,7 +86,8 @@ class DescendantCollectionsMaterialsCounts(PydanticBaseModel):
 
     @classmethod
     def parse_elastic_response(
-        cls: Type[_DESCENDANT_COLLECTIONS_MATERIALS_COUNTS], response: Response,
+        cls: Type[_DESCENDANT_COLLECTIONS_MATERIALS_COUNTS],
+        response: Response,
     ) -> _DESCENDANT_COLLECTIONS_MATERIALS_COUNTS:
         results = glom(
             response,

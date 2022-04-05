@@ -7,10 +7,7 @@ from sqlalchemy.sql import ClauseElement
 from starlette.exceptions import HTTPException
 from starlette.status import HTTP_404_NOT_FOUND
 
-from app.models.collection import (
-    Collection,
-    PortalTreeNode,
-)
+from app.models.collection import Collection, PortalTreeNode
 
 
 class CollectionNotFoundException(HTTPException):
@@ -24,7 +21,8 @@ class CollectionNotFoundException(HTTPException):
 class StatsNotFoundException(HTTPException):
     def __init__(self):
         super().__init__(
-            status_code=HTTP_404_NOT_FOUND, detail=f"Stats not found",
+            status_code=HTTP_404_NOT_FOUND,
+            detail=f"Stats not found",
         )
 
 
@@ -53,7 +51,9 @@ async def build_portal_tree(
 
     for collection in collections:
         portal_node = PortalTreeNode(
-            noderef_id=collection.noderef_id, title=collection.title, children=[],
+            noderef_id=collection.noderef_id,
+            title=collection.title,
+            children=[],
         )
 
         try:

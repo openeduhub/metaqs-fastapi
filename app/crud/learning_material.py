@@ -1,22 +1,18 @@
 from random import randint
-from typing import (
-    List,
-    Optional,
-    Set,
-)
+from typing import List, Optional, Set
 from uuid import UUID
 
 from elasticsearch_dsl.function import RandomScore
 from elasticsearch_dsl.query import FunctionScore
 from elasticsearch_dsl.response import Response
-from glom import (
-    glom,
-    Iter,
-)
+from glom import Iter, glom
 from pydantic import BaseModel
 
 # from app.core.util import slugify
 from app.core.config import ELASTIC_MAX_SIZE
+from app.elastic import Field, Search, qbool, qwildcard
+from app.models.learning_material import LearningMaterial, LearningMaterialAttribute
+
 from .elastic import (
     ResourceType,
     agg_material_types,
@@ -24,17 +20,6 @@ from .elastic import (
     query_materials,
     query_missing_material_license,
 )
-from app.elastic import (
-    Field,
-    Search,
-    qbool,
-    qwildcard,
-)
-from app.models.learning_material import (
-    LearningMaterial,
-    LearningMaterialAttribute,
-)
-
 
 MissingMaterialField = Field(
     "MissingMaterialField",
@@ -73,7 +58,8 @@ async def get_many(
     max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
     query_dict = get_many_base_query(
-        resource_type=ResourceType.MATERIAL, ancestor_id=ancestor_id,
+        resource_type=ResourceType.MATERIAL,
+        ancestor_id=ancestor_id,
     )
     if missing_attr_filter:
         query_dict = missing_attr_filter.__call__(query_dict=query_dict)
@@ -94,7 +80,7 @@ async def get_random(
     s = Search().query(
         FunctionScore(
             query=query_materials(ancestor_id=ancestor_id),
-            functions=RandomScore(seed=randint(1, 2 ** 32 - 1), field="_seq_no"),
+            functions=RandomScore(seed=randint(1, 2**32 - 1), field="_seq_no"),
             boost_mode="sum",
         )
     )

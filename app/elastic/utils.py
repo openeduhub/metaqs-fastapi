@@ -4,15 +4,10 @@ from elasticsearch_dsl import connections
 from elasticsearch_dsl.response import AggResponse
 from glom import merge
 
-from app.core.config import (
-    ELASTICSEARCH_URL,
-    ELASTICSEARCH_TIMEOUT,
-)
+from app.core.config import ELASTICSEARCH_TIMEOUT, ELASTICSEARCH_URL
 from app.core.logging import logger
-from .fields import (
-    Field,
-    FieldType,
-)
+
+from .fields import Field, FieldType
 
 
 async def connect_to_elastic():

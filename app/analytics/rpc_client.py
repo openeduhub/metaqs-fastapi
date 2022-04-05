@@ -2,15 +2,10 @@ from functools import partial
 
 import httpx as http
 import polling2
-from jsonrpcclient import (
-    Ok,
-    request_uuid,
-    parse,
-)
+from jsonrpcclient import Ok, parse, request_uuid
 
 from app.core.config import DBT_URL
 from app.core.logging import logger
-
 
 _dbt_spellcheck_path = "models/spellcheck"
 

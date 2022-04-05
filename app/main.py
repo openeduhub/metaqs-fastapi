@@ -22,14 +22,8 @@ from app.core.config import (
     PROJECT_NAME,
     ROOT_PATH,
 )
-from app.core.errors import (
-    http_422_error_handler,
-    http_error_handler,
-)
-from app.elastic.utils import (
-    close_elastic_connection,
-    connect_to_elastic,
-)
+from app.core.errors import http_422_error_handler, http_error_handler
+from app.elastic.utils import close_elastic_connection, connect_to_elastic
 from app.http import close_client
 
 fastapi_app = FastAPI(
@@ -46,7 +40,8 @@ fastapi_app = FastAPI(
 
 class Ping(BaseModel):
     status: str = Field(
-        default="not ok", description="Ping output. Should be 'ok' in happy case.",
+        default="not ok",
+        description="Ping output. Should be 'ok' in happy case.",
     )
 
 
@@ -118,6 +113,7 @@ app = CORSMiddleware(
 
 if __name__ == "__main__":
     import os
+
     import uvicorn
 
     conf = {

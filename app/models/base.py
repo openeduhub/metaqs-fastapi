@@ -1,7 +1,5 @@
-from pydantic import (
-    BaseModel as _BaseModel,
-    Extra,
-)
+from pydantic import BaseModel as _BaseModel
+from pydantic import Extra
 
 AUTO_UNIQUE_STRING = "AUTO_UNIQUE_STRING"
 

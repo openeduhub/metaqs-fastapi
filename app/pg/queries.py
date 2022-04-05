@@ -1,8 +1,5 @@
 from pprint import pformat
-from typing import (
-    Dict,
-    List,
-)
+from typing import Dict, List
 from uuid import UUID
 
 from asyncpg import Connection
@@ -22,11 +19,11 @@ async def stats_latest(
         results = await conn.fetch(
             """
             with collections as (
-            
+
                 select id
                 from staging.collections
                 where portal_id = $1
-                
+
             )
 
             select stats.resource_id collection_id
@@ -44,11 +41,11 @@ async def stats_latest(
         results = await conn.fetch(
             """
             with collections as (
-                
+
                 select id
                 from staging.collections
                 where portal_id = $1
-                
+
             ), counts as (
 
                 select counts.*
@@ -61,7 +58,7 @@ async def stats_latest(
                      , jsonb_object_agg(counts.learning_resource_type::text, counts.count) counts
                 from counts
                 group by counts.collection_id
-            
+
             )
 
             select c.id collection_id
@@ -82,15 +79,15 @@ async def stats_latest(
         results = await conn.fetch(
             """
             with agg as (
-                 
+
                 select resource_id                    collection_id
                      , array_agg(missing_field::text) missing_fields
                 from staging.missing_fields
                 where resource_type = 'COLLECTION'
                 group by resource_id
-                
+
             )
-            
+
             select c.id collection_id
                  , coalesce(agg.missing_fields, '{}'::text[]) missing_fields
             from staging.collections c

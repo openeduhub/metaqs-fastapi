@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from elasticsearch_dsl.aggs import Agg
-from elasticsearch_dsl.query import Query, Q
+from elasticsearch_dsl.query import Q, Query
 
 from app.core.config import ELASTIC_MAX_SIZE
 from app.elastic import (
@@ -87,7 +87,8 @@ type_filter = {
 
 # TODO: eliminate; use query_many instead
 def get_many_base_query(
-    resource_type: ResourceType, ancestor_id: Optional[UUID] = None,
+    resource_type: ResourceType,
+    ancestor_id: Optional[UUID] = None,
 ) -> dict:
     query_dict = {"filter": [*base_filter, *type_filter[resource_type]]}
 
@@ -129,7 +130,10 @@ def query_missing_material_license() -> Query:
     qfield = LearningMaterialAttribute.LICENSES
     return qboolor(
         [
-            qterms(qfield=qfield, values=["UNTERRICHTS_UND_LEHRMEDIEN", "NONE", ""],),
+            qterms(
+                qfield=qfield,
+                values=["UNTERRICHTS_UND_LEHRMEDIEN", "NONE", ""],
+            ),
             qnotexists(qfield=qfield),
         ]
     )

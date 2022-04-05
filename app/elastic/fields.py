@@ -1,7 +1,4 @@
-from enum import (
-    Enum,
-    auto,
-)
+from enum import Enum, auto
 
 
 class FieldType(str, Enum):

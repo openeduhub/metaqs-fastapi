@@ -1,11 +1,7 @@
 import json
 from typing import Union
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    Security,
-)
+from fastapi import APIRouter, Depends, Security
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from glom import glom
@@ -17,10 +13,7 @@ import app.crud.learning_material as crud_material
 from app.api.auth import authenticated
 from app.core.logging import logger
 from app.http import get_client
-from app.models.learning_material import (
-    LearningMaterial,
-    LearningMaterialAttribute,
-)
+from app.models.learning_material import LearningMaterial, LearningMaterialAttribute
 
 router = APIRouter()
 
@@ -42,7 +35,8 @@ def swagger_spec(path: str = None):
 
 
 @router.get(
-    "/check/random-material", tags=[],
+    "/check/random-material",
+    tags=[],
 )
 async def spellcheck_random_material(*, http: AsyncClient = Depends(get_client)):
     material: LearningMaterial = await crud_material.get_random(

@@ -11,12 +11,7 @@ from app.core.config import (
 )
 from app.core.logging import logger
 from app.crud.stats import search_hits_by_material_type
-from app.pg.metadata import (
-    Collection,
-    ResourceField,
-    ResourceType,
-    search_stats,
-)
+from app.pg.metadata import Collection, ResourceField, ResourceType, search_stats
 from app.pg.util import get_postgres
 
 

@@ -1,33 +1,15 @@
 from __future__ import annotations
+
 from itertools import chain
-from typing import (
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
-    TypeVar,
-)
+from typing import ClassVar, Dict, List, Optional, Type, TypeVar
 from uuid import UUID
 
-from glom import (
-    glom,
-    Coalesce,
-    Iter,
-)
+from glom import Coalesce, Iter, glom
 
-from app.elastic.fields import (
-    Field,
-    FieldType,
-)
-from .base import (
-    BaseModel,
-    ResponseModel,
-)
-from .elastic import (
-    ElasticResource,
-    ElasticResourceAttribute,
-)
+from app.elastic.fields import Field, FieldType
+
+from .base import BaseModel, ResponseModel
+from .elastic import ElasticResource, ElasticResourceAttribute
 from .util import EmptyStrToNone
 
 _COLLECTION = TypeVar("_COLLECTION")
@@ -68,7 +50,10 @@ class CollectionBase(ElasticResource):
     }
 
     @classmethod
-    def parse_elastic_hit_to_dict(cls: Type[_COLLECTION], hit: Dict,) -> dict:
+    def parse_elastic_hit_to_dict(
+        cls: Type[_COLLECTION],
+        hit: Dict,
+    ) -> dict:
         spec = {
             "title": Coalesce(CollectionAttribute.TITLE.path, default=None),
             "keywords": (
@@ -88,7 +73,10 @@ class CollectionBase(ElasticResource):
         }
 
     @classmethod
-    def parse_elastic_hit(cls: Type[_COLLECTION], hit: Dict,) -> _COLLECTION:
+    def parse_elastic_hit(
+        cls: Type[_COLLECTION],
+        hit: Dict,
+    ) -> _COLLECTION:
         collection = cls.construct(**cls.parse_elastic_hit_to_dict(hit))
         try:
             collection.parent_id = collection.path[-1]

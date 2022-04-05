@@ -1,17 +1,14 @@
 import json
 from functools import lru_cache
 from pprint import pformat
-from typing import (
-    Iterator,
-    Tuple,
-)
+from typing import Iterator, Tuple
 
 import asyncpg
 from asyncpg.pool import Pool
 from fastapi_utils.session import FastAPISessionMaker
+from sqlalchemy.dialects.postgresql import pypostgresql
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import ClauseElement
-from sqlalchemy.dialects.postgresql import pypostgresql
 
 from app.core.config import (
     DATABASE_URL,
@@ -31,7 +28,7 @@ dialect._has_native_hstore = True
 
 
 def get_postgres() -> Iterator[Session]:
-    """ FastAPI dependency that provides a sqlalchemy session """
+    """FastAPI dependency that provides a sqlalchemy session"""
     yield from _get_fastapi_sessionmaker().get_db()
 
 
@@ -48,7 +45,7 @@ _async_Pg = AsyncPg()
 
 
 async def get_postgres_async() -> Pool:
-    """ FastAPI dependency that provides a asyncpg connection """
+    """FastAPI dependency that provides a asyncpg connection"""
     if not _async_Pg.pool:
         await connect_to_postgres()
     return _async_Pg.pool

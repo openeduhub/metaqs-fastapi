@@ -1,27 +1,15 @@
-from typing import (
-    List,
-    Optional,
-    Set,
-)
+from typing import List, Optional, Set
 from uuid import UUID
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    Query,
-    Response,
-)
-from starlette.status import (
-    HTTP_200_OK,
-    HTTP_404_NOT_FOUND,
-)
+from fastapi import APIRouter, Depends, Query, Response
+from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
 from starlette_context import context
 
 import app.crud.collection as crud_collection
 import app.crud.stats as crud_stats
 from app.api.util import (
-    collections_filter_params,
     collection_response_fields,
+    collections_filter_params,
     filter_response_fields,
     portal_id_param,
     portal_id_with_root_param,
@@ -35,18 +23,14 @@ from app.models.collection import (
     CollectionMaterialsCount,
     PortalTreeNode,
 )
-from app.score import (
-    ScoreModulator,
-    ScoreWeights,
-    calc_scores,
-    calc_weighted_score,
-)
+from app.score import ScoreModulator, ScoreWeights, calc_scores, calc_weighted_score
 
 router = APIRouter()
 
 
 @router.get(
-    "/collections", tags=["Collections"],
+    "/collections",
+    tags=["Collections"],
 )
 async def get_portals():
     return await crud_collection.get_portals()
@@ -60,7 +44,9 @@ async def get_portals():
     tags=["Collections"],
 )
 async def get_portal_tree(
-    *, noderef_id: UUID = Depends(portal_id_with_root_param), response: Response,
+    *,
+    noderef_id: UUID = Depends(portal_id_with_root_param),
+    response: Response,
 ):
     collections = await crud_collection.get_many_sorted(root_noderef_id=noderef_id)
     tree = await build_portal_tree(collections=collections, root_noderef_id=noderef_id)
@@ -124,7 +110,9 @@ async def search_hits_by_material_type(
     tags=["Statistics"],
 )
 async def material_counts_by_type(
-    *, noderef_id: UUID = Depends(portal_id_param), response: Response,
+    *,
+    noderef_id: UUID = Depends(portal_id_param),
+    response: Response,
 ):
     material_counts = await crud_stats.material_counts_by_type(
         root_noderef_id=noderef_id
@@ -143,7 +131,9 @@ async def material_counts_by_type(
     tags=["Statistics"],
 )
 async def material_counts_tree(
-    *, noderef_id: UUID = Depends(portal_id_with_root_param), response: Response,
+    *,
+    noderef_id: UUID = Depends(portal_id_with_root_param),
+    response: Response,
 ):
     descendant_collections = await crud_collection.get_many(
         ancestor_id=noderef_id,
@@ -180,7 +170,9 @@ async def material_counts_tree(
     stats = [
         *[
             CollectionMaterialsCount(
-                noderef_id=noderef_id, title=title, materials_count=0,
+                noderef_id=noderef_id,
+                title=title,
+                materials_count=0,
             )
             for (noderef_id, title) in descendant_collections.items()
         ],

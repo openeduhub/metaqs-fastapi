@@ -1,15 +1,8 @@
 from enum import Enum
-from typing import (
-    ClassVar,
-    List,
-    Optional,
-)
+from typing import ClassVar, List, Optional
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    validator,
-)
+from pydantic import BaseModel, validator
 
 from .util import none_to_empty_list
 

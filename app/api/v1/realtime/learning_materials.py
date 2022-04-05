@@ -1,34 +1,21 @@
-from typing import (
-    List,
-    Optional,
-    Set,
-)
+from typing import List, Optional, Set
 from uuid import UUID
 
-from fastapi import (
-    APIRouter,
-    Depends,
-)
+from fastapi import APIRouter, Depends
 from starlette.responses import Response
-from starlette.status import (
-    HTTP_200_OK,
-    HTTP_404_NOT_FOUND,
-)
+from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
 from starlette_context import context
 
 import app.crud.collection as crud_collection
 import app.crud.learning_material as crud_materials
 from app.api.util import (
     filter_response_fields,
-    materials_filter_params,
     material_response_fields,
+    materials_filter_params,
     portal_id_with_root_param,
 )
 from app.crud import MissingMaterialAttributeFilter
-from app.models.learning_material import (
-    LearningMaterial,
-    LearningMaterialAttribute,
-)
+from app.models.learning_material import LearningMaterial, LearningMaterialAttribute
 
 router = APIRouter()
 

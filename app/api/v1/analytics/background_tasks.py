@@ -1,8 +1,4 @@
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Security,
-)
+from fastapi import APIRouter, BackgroundTasks, Security
 from starlette.status import HTTP_202_ACCEPTED
 
 import app.analytics.analytics as analytics

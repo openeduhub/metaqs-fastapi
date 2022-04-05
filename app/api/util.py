@@ -1,32 +1,26 @@
-from typing import (
-    List,
-    Optional,
-    Set,
-)
+from typing import List, Optional, Set
 from uuid import UUID
 
-from fastapi import (
-    Path,
-    Query,
-)
+from fastapi import Path, Query
 from pydantic import BaseModel
 from starlette.responses import Response
 
 import app.crud.collection as crud_collection
 from app.core.config import PORTAL_ROOT_ID
+from app.crud import (
+    MissingCollectionAttributeFilter,
+    MissingCollectionField,
+    MissingMaterialAttributeFilter,
+    MissingMaterialField,
+)
 from app.elastic.fields import Field
 from app.models.collection import CollectionAttribute
 from app.models.learning_material import LearningMaterialAttribute
-from app.crud import (
-    MissingCollectionField,
-    MissingMaterialField,
-    MissingCollectionAttributeFilter,
-    MissingMaterialAttributeFilter,
-)
 
 
 def portal_id_param(
-    *, noderef_id: UUID = Path(..., examples=crud_collection.PORTALS),
+    *,
+    noderef_id: UUID = Path(..., examples=crud_collection.PORTALS),
 ) -> UUID:
     return noderef_id
 

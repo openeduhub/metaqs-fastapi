@@ -1,48 +1,27 @@
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Set,
-)
+from typing import Dict, List, Optional, Set
 from uuid import UUID
 
 from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
 
-from app.core.config import (
-    PORTAL_ROOT_ID,
-    ELASTIC_MAX_SIZE,
-)
-from app.elastic import (
-    Field,
-    Search,
-    abucketsort,
-    qbool,
-    qwildcard,
-)
+from app.core.config import ELASTIC_MAX_SIZE, PORTAL_ROOT_ID
+from app.elastic import Field, Search, abucketsort, qbool, qwildcard
+from app.models.collection import Collection, CollectionAttribute
 from app.models.elastic import (
     DescendantCollectionsMaterialsCounts,
     ElasticResourceAttribute,
 )
-from app.models.collection import (
-    Collection,
-    CollectionAttribute,
-)
-from app.models.learning_material import (
-    LearningMaterial,
-    LearningMaterialAttribute,
-)
+from app.models.learning_material import LearningMaterial, LearningMaterialAttribute
+
 from .elastic import (
     ResourceType,
     agg_materials_by_collection,
     get_many_base_query,
-    query_materials,
     query_collections,
+    query_materials,
 )
-from .learning_material import (
-    get_many as get_many_materials,
-    MissingAttributeFilter as MissingMaterialAttributeFilter,
-)
+from .learning_material import MissingAttributeFilter as MissingMaterialAttributeFilter
+from .learning_material import get_many as get_many_materials
 
 PORTALS = {
     # "Physik": {"value": "unknown"},
@@ -126,7 +105,8 @@ async def get_many(
     source_fields: Optional[Set[CollectionAttribute]] = None,
 ) -> List[Collection]:
     query_dict = get_many_base_query(
-        resource_type=ResourceType.COLLECTION, ancestor_id=ancestor_id,
+        resource_type=ResourceType.COLLECTION,
+        ancestor_id=ancestor_id,
     )
     if missing_attr_filter:
         query_dict = missing_attr_filter.__call__(query_dict=query_dict)
@@ -145,14 +125,18 @@ async def get_many_sorted(
 ) -> List[Collection]:
     s = Search().query(query_collections(root_noderef_id))
 
-    response: Response = s.source(
-        [
-            ElasticResourceAttribute.NODEREF_ID,
-            CollectionAttribute.TITLE,
-            CollectionAttribute.PATH,
-            CollectionAttribute.PARENT_ID,
-        ]
-    ).sort(CollectionAttribute.FULLPATH)[:size].execute()
+    response: Response = (
+        s.source(
+            [
+                ElasticResourceAttribute.NODEREF_ID,
+                CollectionAttribute.TITLE,
+                CollectionAttribute.PATH,
+                CollectionAttribute.PARENT_ID,
+            ]
+        )
+        .sort(CollectionAttribute.FULLPATH)[:size]
+        .execute()
+    )
 
     if response.success():
         return [Collection.parse_elastic_hit(hit) for hit in response]
@@ -193,7 +177,8 @@ async def material_counts_by_descendant(
 ) -> DescendantCollectionsMaterialsCounts:
     s = Search().query(query_materials(ancestor_id=ancestor_id))
     s.aggs.bucket("grouped_by_collection", agg_materials_by_collection()).pipeline(
-        "sorted_by_count", abucketsort(sort=[{"_count": {"order": "asc"}}]),
+        "sorted_by_count",
+        abucketsort(sort=[{"_count": {"order": "asc"}}]),
     )
 
     response: Response = s[:0].execute()

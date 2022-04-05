@@ -1,9 +1,6 @@
 from typing import Union
 
-from httpx import (
-    AsyncClient,
-    Timeout,
-)
+from httpx import AsyncClient, Timeout
 
 from app.core.logging import logger
 

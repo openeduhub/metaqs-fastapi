@@ -1,12 +1,6 @@
-from typing import (
-    List,
-    Union,
-)
+from typing import List, Union
 
-from elasticsearch_dsl import (
-    A,
-    Q,
-)
+from elasticsearch_dsl import A, Q
 from elasticsearch_dsl.aggs import Agg
 from elasticsearch_dsl.query import Query
 
@@ -57,7 +51,10 @@ def qnotexists(qfield: str) -> Query:
 
 
 def qboolor(conditions: List[Query]) -> Query:
-    return qbool(should=conditions, minimum_should_match=1,)
+    return qbool(
+        should=conditions,
+        minimum_should_match=1,
+    )
 
 
 def aterms(qfield: Union[Field, str], **kwargs) -> Agg:

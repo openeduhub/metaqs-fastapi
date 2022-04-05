@@ -27,8 +27,5 @@ from .dsl import (
     qwildcard,
     script,
 )
-from .fields import (
-    Field,
-    FieldType,
-)
+from .fields import Field, FieldType
 from .search import Search
