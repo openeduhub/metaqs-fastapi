@@ -52,7 +52,6 @@ PORTALS = {
     "Philosophie": {"value": "9d364fd0-4374-40b4-a153-3c722b9cda35"},
 }
 
-
 MissingCollectionField = Field(
     "MissingCollectionField",
     [

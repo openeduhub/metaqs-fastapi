@@ -32,11 +32,13 @@ class Search(ElasticSearch):
 
         response = super(Search, self).execute(ignore_cache=ignore_cache)
 
+        # TODO: Refactor
         if DEBUG:
             logger.debug(
                 f"Response received from elastic:\n{pformat(response.to_dict())}"
             )
 
+        # tODO: Refactor into speaking function,e.g. see RawcontextMiddleware https://starlette-context.readthedocs.io/en/latest/middleware.html
         try:
             context["elastic_queries"] = context.get("elastic_queries", []) + [
                 {"query": self.to_dict(), "response": response.to_dict()}
