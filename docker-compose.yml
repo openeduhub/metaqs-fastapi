@@ -147,9 +147,9 @@ services:
 
   superset:
     container_name: metaqs-superset
-#    build:
-    #      context: ./superset/
-    #      network: host
+    build:
+      context: ./superset/
+      network: host
     image: community.docker.edu-sharing.com/metaqs-superset:latest
     <<: *restart-policy
     <<: *logging-config

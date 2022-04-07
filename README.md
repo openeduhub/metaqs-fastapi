@@ -71,10 +71,23 @@ docker-compose --version  # Test the installation
 ## Preparing containers
 
 Use 
-```
+```bash
 docker-compose up
 ```
 
 to download images for dbt, language tool, postgreSQL.
 
 Fast API
+
+DBT
+
+```bash
+docker-compose build dbt
+docker push community.docker.edu-sharing.com/metaqs-dbt:latest
+```
+
+Superset
+```bash
+docker-compose build superset
+docker push community.docker.edu-sharing.com/metaqs-superset:latest
+```
