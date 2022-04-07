@@ -26,6 +26,7 @@ def main():
                         result[replication_source][key] = content_value + result[replication_source][key]
                     print(content, content_value, result[replication_source][key])
     print(result)
+    # TODO: Potentially some sources do not have all properties
     for replication_source, properties in result.items():
         print(f"----{replication_source}----")
         number_of_entries = properties["entries"]
