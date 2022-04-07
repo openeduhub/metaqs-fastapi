@@ -89,9 +89,9 @@ services:
 
   fastapi:
     container_name: metaqs-api-fastapi
-#    build:
-#      context: ../fastapi/
-#      network: host
+    build:
+      context: .
+      network: host
     image: community.docker.edu-sharing.com/metaqs-api-fastapi:latest
     <<: *restart-policy
     <<: *logging-config
