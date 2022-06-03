@@ -4,30 +4,18 @@ from typing import List
 from uuid import UUID
 
 from asyncpg import Pool
-from fastapi import (
-    APIRouter,
-    Depends,
-)
-from starlette.status import (
-    HTTP_200_OK,
-    HTTP_404_NOT_FOUND,
-)
+from fastapi import APIRouter, Depends
+from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND
 
 from app.api.util import portal_id_param
 from app.crud.util import StatsNotFoundException, build_portal_tree
-from app.models.collection import (
-    PortalTreeNode,
-    Collection,
-)
-from app.models.oeh_validation import (
-    MaterialFieldValidation,
-    OehValidationError,
-)
+from app.models.collection import Collection, PortalTreeNode
+from app.models.oeh_validation import MaterialFieldValidation, OehValidationError
 from app.models.stats import (
     CollectionValidationStats,
     MaterialValidationStats,
-    StatType,
     StatsResponse,
+    StatType,
     ValidationStatsResponse,
 )
 from app.pg.queries import stats_latest
@@ -71,7 +59,10 @@ async def read_stats(
     for stat in material_types_stats:
         stats[str(stat["collection_id"])]["material_types"] = stat["counts"]
 
-    return StatsResponse(derived_at=datetime.fromtimestamp(0), stats=stats,)
+    return StatsResponse(
+        derived_at=datetime.fromtimestamp(0),
+        stats=stats,
+    )
 
 
 @router.get(

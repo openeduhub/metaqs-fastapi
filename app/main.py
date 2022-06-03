@@ -7,9 +7,9 @@ from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 from starlette_context.middleware import RawContextMiddleware
 
 import app.api as api
-from app.analytics.analytics import background_task as analytics_background_task
-from app.analytics.search_stats import background_task as search_stats_background_task
-from app.analytics.spellcheck import background_task as spellcheck_background_task
+# from app.analytics.analytics import background_task as analytics_background_task
+# from app.analytics.search_stats import background_task as search_stats_background_task
+# from app.analytics.spellcheck import background_task as spellcheck_background_task
 from app.api.languagetool import router as languagetool_router
 from app.core.config import (
     ALLOWED_HOSTS,
@@ -30,7 +30,7 @@ from app.elastic.utils import (
     close_elastic_connection,
     connect_to_elastic,
 )
-from app.http import close_client
+from app.http_client import close_client
 
 fastapi_app = FastAPI(
     root_path=ROOT_PATH,
@@ -46,7 +46,8 @@ fastapi_app = FastAPI(
 
 class Ping(BaseModel):
     status: str = Field(
-        default="not ok", description="Ping output. Should be 'ok' in happy case.",
+        default="not ok",
+        description="Ping output. Should be 'ok' in happy case.",
     )
 
 
@@ -91,15 +92,15 @@ for route in fastapi_app.routes:
 
 fastapi_app.add_middleware(RawContextMiddleware)
 
-fastapi_app.add_event_handler("startup", connect_to_elastic)
-fastapi_app.add_event_handler("shutdown", close_elastic_connection)
+# fastapi_app.add_event_handler("startup", connect_to_elastic)
+# fastapi_app.add_event_handler("shutdown", close_elastic_connection)
 
-if BACKGROUND_TASK_ANALYTICS_INTERVAL:
-    fastapi_app.add_event_handler("startup", analytics_background_task)
-if BACKGROUND_TASK_SEARCH_STATS_INTERVAL:
-    fastapi_app.add_event_handler("startup", search_stats_background_task)
-if BACKGROUND_TASK_SPELLCHECK_INTERVAL:
-    fastapi_app.add_event_handler("startup", spellcheck_background_task)
+#if BACKGROUND_TASK_ANALYTICS_INTERVAL:
+#    fastapi_app.add_event_handler("startup", analytics_background_task)
+# if BACKGROUND_TASK_SEARCH_STATS_INTERVAL:
+#     fastapi_app.add_event_handler("startup", search_stats_background_task)
+# if BACKGROUND_TASK_SPELLCHECK_INTERVAL:
+#     fastapi_app.add_event_handler("startup", spellcheck_background_task)
 
 fastapi_app.add_exception_handler(HTTPException, http_error_handler)
 fastapi_app.add_exception_handler(HTTP_422_UNPROCESSABLE_ENTITY, http_422_error_handler)
@@ -118,11 +119,12 @@ app = CORSMiddleware(
 
 if __name__ == "__main__":
     import os
+
     import uvicorn
 
     conf = {
         "host": "0.0.0.0",
-        "port": 80,
+        "port": 8082,
         "reload": True,
         "reload_dirs": [f"{os.getcwd()}/app"],
         "log_level": LOG_LEVEL,

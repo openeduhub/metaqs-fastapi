@@ -35,13 +35,19 @@ class ResourceField(Enum):
 
 class Collection(Base):
     __table__ = sa.Table(
-        "collections", Base.metadata, schema="raw", autoload_with=engine,
+        "collections",
+        Base.metadata,
+        schema="raw",
+        autoload_with=engine,
     )
 
 
 class Material(Base):
     __table__ = sa.Table(
-        "materials", Base.metadata, schema="raw", autoload_with=engine,
+        "materials",
+        Base.metadata,
+        schema="raw",
+        autoload_with=engine,
     )
 
 

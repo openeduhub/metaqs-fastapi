@@ -1,31 +1,16 @@
 from itertools import chain
-from typing import (
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Type,
-    TypeVar,
-)
+from typing import ClassVar, Dict, List, Optional, Type, TypeVar
 
-from glom import (
-    glom,
-    Coalesce,
-    Iter,
-)
+from glom import Coalesce, Iter, glom
+
+from app.elastic.fields import Field, FieldType
+
+from .base import ResponseModel
+from .elastic import ElasticResource, ElasticResourceAttribute
+from .util import EmptyStrToNone
 
 # from pydantic import HttpUrl
 
-from app.elastic.fields import (
-    Field,
-    FieldType,
-)
-from .base import ResponseModel
-from .elastic import (
-    ElasticResource,
-    ElasticResourceAttribute,
-)
-from .util import EmptyStrToNone
 
 _LEARNING_MATERIAL = TypeVar("_LEARNING_MATERIAL")
 
@@ -88,7 +73,10 @@ class LearningMaterialBase(ElasticResource):
     }
 
     @classmethod
-    def parse_elastic_hit_to_dict(cls: Type[_LEARNING_MATERIAL], hit: Dict,) -> dict:
+    def parse_elastic_hit_to_dict(
+        cls: Type[_LEARNING_MATERIAL],
+        hit: Dict,
+    ) -> dict:
         spec = {
             "title": Coalesce(LearningMaterialAttribute.TITLE.path, default=None),
             "keywords": (

@@ -1,48 +1,27 @@
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Set,
-)
+from typing import Dict, List, Optional, Set
 from uuid import UUID
 
 from elasticsearch_dsl.response import Response
 from pydantic import BaseModel
 
-from app.core.config import (
-    PORTAL_ROOT_ID,
-    ELASTIC_MAX_SIZE,
-)
-from app.elastic import (
-    Field,
-    Search,
-    abucketsort,
-    qbool,
-    qwildcard,
-)
+from app.core.config import ELASTIC_MAX_SIZE, PORTAL_ROOT_ID
+from app.elastic import Field, Search, abucketsort, qbool, qwildcard
+from app.models.collection import Collection, CollectionAttribute
 from app.models.elastic import (
     DescendantCollectionsMaterialsCounts,
     ElasticResourceAttribute,
 )
-from app.models.collection import (
-    Collection,
-    CollectionAttribute,
-)
-from app.models.learning_material import (
-    LearningMaterial,
-    LearningMaterialAttribute,
-)
+from app.models.learning_material import LearningMaterial, LearningMaterialAttribute
+
 from .elastic import (
     ResourceType,
     agg_materials_by_collection,
     get_many_base_query,
-    query_materials,
     query_collections,
+    query_materials,
 )
-from .learning_material import (
-    get_many as get_many_materials,
-    MissingAttributeFilter as MissingMaterialAttributeFilter,
-)
+from .learning_material import MissingAttributeFilter as MissingMaterialAttributeFilter
+from .learning_material import get_many as get_many_materials
 
 PORTALS = {
     # "Physik": {"value": "unknown"},
@@ -73,17 +52,16 @@ PORTALS = {
     "Philosophie": {"value": "9d364fd0-4374-40b4-a153-3c722b9cda35"},
 }
 
-
 MissingCollectionField = Field(
     "MissingCollectionField",
     [
         (f.name, (f.value, f.field_type))
         for f in [
-            CollectionAttribute.NAME,
-            CollectionAttribute.TITLE,
-            CollectionAttribute.KEYWORDS,
-            CollectionAttribute.DESCRIPTION,
-        ]
+        CollectionAttribute.NAME,
+        CollectionAttribute.TITLE,
+        CollectionAttribute.KEYWORDS,
+        CollectionAttribute.DESCRIPTION,
+    ]
     ],
 )
 
@@ -120,30 +98,40 @@ async def get_single(noderef_id: UUID) -> Collection:
 
 
 async def get_many(
-    ancestor_id: Optional[UUID] = None,
-    missing_attr_filter: Optional[MissingAttributeFilter] = None,
-    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
-    source_fields: Optional[Set[CollectionAttribute]] = None,
+        ancestor_id: Optional[UUID] = None,
+        missing_attr_filter: Optional[MissingAttributeFilter] = None,
+        max_hits: Optional[int] = ELASTIC_MAX_SIZE,
+        source_fields: Optional[Set[CollectionAttribute]] = None,
 ) -> List[Collection]:
     query_dict = get_many_base_query(
-        resource_type=ResourceType.COLLECTION, ancestor_id=ancestor_id,
+        resource_type=ResourceType.COLLECTION,
+        ancestor_id=ancestor_id,
     )
     if missing_attr_filter:
         query_dict = missing_attr_filter.__call__(query_dict=query_dict)
     s = Search().query(qbool(**query_dict))
 
     response = s.source(source_fields if source_fields else Collection.source_fields)[
-        :max_hits
-    ].execute()
+               :max_hits
+               ].execute()
 
     if response.success():
         return [Collection.parse_elastic_hit(hit) for hit in response]
 
 
 async def get_many_sorted(
-    root_noderef_id: UUID = PORTAL_ROOT_ID, size: int = ELASTIC_MAX_SIZE
+        root_noderef_id: UUID = PORTAL_ROOT_ID, size: int = ELASTIC_MAX_SIZE
 ) -> List[Collection]:
     s = Search().query(query_collections(root_noderef_id))
+
+    print(s.source(
+        [
+            ElasticResourceAttribute.NODEREF_ID,
+            CollectionAttribute.TITLE,
+            CollectionAttribute.PATH,
+            CollectionAttribute.PARENT_ID,
+        ]
+    ).sort(CollectionAttribute.FULLPATH)[:size].to_dict())
 
     response: Response = s.source(
         [
@@ -160,10 +148,10 @@ async def get_many_sorted(
 
 # TODO: move to learning_material crud
 async def get_child_materials_with_missing_attributes(
-    noderef_id: UUID,
-    missing_attr_filter: MissingMaterialAttributeFilter,
-    source_fields: Optional[Set[LearningMaterialAttribute]],
-    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
+        noderef_id: UUID,
+        missing_attr_filter: MissingMaterialAttributeFilter,
+        source_fields: Optional[Set[LearningMaterialAttribute]],
+        max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[LearningMaterial]:
     return await get_many_materials(
         ancestor_id=noderef_id,
@@ -175,10 +163,10 @@ async def get_child_materials_with_missing_attributes(
 
 # TODO: eliminate
 async def get_child_collections_with_missing_attributes(
-    noderef_id: UUID,
-    missing_attr_filter: MissingAttributeFilter,
-    source_fields: Optional[Set[CollectionAttribute]],
-    max_hits: Optional[int] = ELASTIC_MAX_SIZE,
+        noderef_id: UUID,
+        missing_attr_filter: MissingAttributeFilter,
+        source_fields: Optional[Set[CollectionAttribute]],
+        max_hits: Optional[int] = ELASTIC_MAX_SIZE,
 ) -> List[Collection]:
     return await get_many(
         ancestor_id=noderef_id,
@@ -189,11 +177,12 @@ async def get_child_collections_with_missing_attributes(
 
 
 async def material_counts_by_descendant(
-    ancestor_id: UUID,
+        ancestor_id: UUID,
 ) -> DescendantCollectionsMaterialsCounts:
     s = Search().query(query_materials(ancestor_id=ancestor_id))
     s.aggs.bucket("grouped_by_collection", agg_materials_by_collection()).pipeline(
-        "sorted_by_count", abucketsort(sort=[{"_count": {"order": "asc"}}]),
+        "sorted_by_count",
+        abucketsort(sort=[{"_count": {"order": "asc"}}]),
     )
 
     response: Response = s[:0].execute()

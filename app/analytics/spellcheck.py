@@ -13,10 +13,7 @@ from app.core.config import (
     LANGUAGETOOL_URL,
 )
 from app.core.logging import logger
-from app.pg.metadata import (
-    spellcheck,
-    spellcheck_queue,
-)
+from app.pg.metadata import spellcheck, spellcheck_queue
 from app.pg.util import get_postgres
 
 

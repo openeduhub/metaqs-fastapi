@@ -1,22 +1,13 @@
 from datetime import datetime
 from enum import Enum
-from typing import (
-    Dict,
-    Generic,
-    Optional,
-    TypeVar,
-    List,
-)
+from typing import Dict, Generic, List, Optional, TypeVar
 from uuid import UUID
 
 from pydantic import Field
 from pydantic.generics import GenericModel
 
 from .base import ResponseModel
-from .oeh_validation import (
-    MaterialFieldValidation,
-    OehValidationError,
-)
+from .oeh_validation import MaterialFieldValidation, OehValidationError
 
 
 class StatType(str, Enum):

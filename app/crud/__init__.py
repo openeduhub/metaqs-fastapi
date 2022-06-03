@@ -12,16 +12,8 @@ These building blocks are used in the `collections.py`, `learning_material.py` a
 The `util.py` module contains few generic helper functions.
 """
 
-from .collection import (
-    MissingCollectionField,
-    MissingAttributeFilter as MissingCollectionAttributeFilter,
-)
-from .learning_material import (
-    MissingMaterialField,
-    MissingAttributeFilter as MissingMaterialAttributeFilter,
-)
-
-from .util import (
-    OrderByDirection,
-    OrderByParams,
-)
+from .collection import MissingAttributeFilter as MissingCollectionAttributeFilter
+from .collection import MissingCollectionField
+from .learning_material import MissingAttributeFilter as MissingMaterialAttributeFilter
+from .learning_material import MissingMaterialField
+from .util import OrderByDirection, OrderByParams
